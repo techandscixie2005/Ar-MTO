@@ -69,7 +69,7 @@ def _split_T(T):
 class TestRotationEquivariance:
     @pytest.mark.parametrize("l", [1, 2, 3])
     def test_wigner_d_equivariance(self, l):
-        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu")
+        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu", summation=False, scale=None)
         z, pos = _make_molecule(5, seed=42)
         R = _random_rotation(seed=100)
         pos_rot = pos @ R.T
@@ -91,7 +91,7 @@ class TestRotationEquivariance:
 
     def test_all_orders_simultaneous(self):
         """All l blocks transform correctly under the same rotation."""
-        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu")
+        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu", summation=False, scale=None)
         z, pos = _make_molecule(6, seed=200)
         R = _random_rotation(seed=300)
 
@@ -110,7 +110,7 @@ class TestRotationEquivariance:
 
     def test_multiple_rotations(self):
         """Equivariance holds across different random rotations."""
-        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu")
+        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu", summation=False, scale=None)
         z, pos = _make_molecule(5, seed=42)
 
         for rot_seed in [10, 20, 30, 40, 50]:
@@ -129,7 +129,7 @@ class TestRotationEquivariance:
 class TestParity:
     def test_spatial_inversion_parity(self):
         """Under full inversion, odd-l blocks flip sign, even-l blocks are invariant."""
-        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu")
+        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu", summation=False, scale=None)
         z, pos = _make_molecule(5, seed=42)
         inversion = torch.diag(torch.tensor([-1.0, -1.0, -1.0]))
 
@@ -149,7 +149,7 @@ class TestParity:
 
 class TestTranslationInvariance:
     def test_translation_invariance(self):
-        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu")
+        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu", summation=False, scale=None)
         z, pos = _make_molecule(5, seed=42)
         translation = torch.tensor([10.0, -5.0, 3.0])
 
@@ -163,7 +163,7 @@ class TestTranslationInvariance:
 
 class TestPermutationEquivariance:
     def test_permutation_equivariance(self):
-        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu")
+        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu", summation=False, scale=None)
         z = torch.tensor([1, 6, 1, 6, 1], dtype=torch.long)
         pos = torch.tensor([
             [0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0],

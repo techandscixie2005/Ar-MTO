@@ -40,7 +40,7 @@ LAYOUT = None
 def _get_layout():
     global LAYOUT
     if LAYOUT is None:
-        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu")
+        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu", summation=False, scale=None)
         maxl = max(ir.l for _, ir in model.irreps_sh)
         irreps_T = o3.Irreps((model.features, (l, (-1) ** l)) for l in range(1, maxl + 1))
         blocks = []
@@ -76,7 +76,7 @@ def reconstruct_T(blocks):
 
 class TestSplitReconstruct:
     def test_split_dimensions(self):
-        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu")
+        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu", summation=False, scale=None)
         z, pos = _make_molecule(5)
         with torch.no_grad():
             _S, T = _run_forward(model, z, pos)
@@ -87,7 +87,7 @@ class TestSplitReconstruct:
 
     @pytest.mark.parametrize("n_atoms", [3, 4, 5, 6, 8])
     def test_exact_reconstruction(self, n_atoms):
-        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu")
+        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu", summation=False, scale=None)
         z, pos = _make_molecule(n_atoms, seed=n_atoms * 10)
         with torch.no_grad():
             _S, T = _run_forward(model, z, pos)
@@ -98,7 +98,7 @@ class TestSplitReconstruct:
 
     def test_reconstruction_exact_zero_error(self):
         """Reconstruction should be exact (identity slices)."""
-        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu")
+        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu", summation=False, scale=None)
         z, pos = _make_molecule(5)
         with torch.no_grad():
             _S, T = _run_forward(model, z, pos)
@@ -109,7 +109,7 @@ class TestSplitReconstruct:
 
     def test_variable_atom_counts(self):
         """Split/reconstruct should work for any number of atoms."""
-        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu")
+        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu", summation=False, scale=None)
         for n in [3, 4, 6, 7, 8, 10]:
             z, pos = _make_molecule(n, seed=n)
             with torch.no_grad():

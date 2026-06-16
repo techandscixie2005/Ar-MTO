@@ -51,19 +51,19 @@ def get_tensor_layout(model):
 
 class TestTensorLayout:
     def test_model_instantiation(self):
-        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu")
+        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu", summation=False, scale=None)
         assert model.features == 128
         assert model.vdim == 1920
         assert model.out_type == "latent"
 
     def test_irreps_string(self):
-        layout = get_tensor_layout(DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu"))
+        layout = get_tensor_layout(DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu", summation=False, scale=None))
         assert layout["irreps_str"] == "128x1o+128x2e+128x3o"
         assert layout["total_vdim"] == 1920
         assert layout["scalar_dim"] == 128
 
     def test_block_structure(self):
-        layout = get_tensor_layout(DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu"))
+        layout = get_tensor_layout(DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu", summation=False, scale=None))
         blocks = layout["blocks"]
         assert len(blocks) == 3
 
@@ -89,7 +89,7 @@ class TestTensorLayout:
         assert blocks[2]["flat_end"] == 1920
 
     def test_forward_shapes(self):
-        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu")
+        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu", summation=False, scale=None)
         z, pos = _make_molecule(5)
         with torch.no_grad():
             S, T = _run_forward(model, z, pos)
@@ -97,7 +97,7 @@ class TestTensorLayout:
         assert T.shape == (5, 1920), f"Expected T shape (5, 1920), got {T.shape}"
 
     def test_forward_shapes_variable_atoms(self):
-        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu")
+        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu", summation=False, scale=None)
         for n in [3, 4, 6, 8]:
             z, pos = _make_molecule(n, seed=n)
             with torch.no_grad():
@@ -106,7 +106,7 @@ class TestTensorLayout:
             assert T.shape == (n, 1920)
 
     def test_no_nan(self):
-        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu")
+        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu", summation=False, scale=None)
         z, pos = _make_molecule(5)
         with torch.no_grad():
             S, T = _run_forward(model, z, pos)
@@ -117,7 +117,7 @@ class TestTensorLayout:
 
     def test_l_0_not_in_T(self):
         """S (l=0) scalars live in S, not in T's irrep blocks."""
-        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu")
+        model = DetaNet(num_features=128, maxl=3, out_type="latent", device="cpu", summation=False, scale=None)
         layout = get_tensor_layout(model)
         for b in layout["blocks"]:
             assert b["l"] >= 1, "T should not contain l=0 irreps (those are in S)"

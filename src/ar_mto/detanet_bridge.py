@@ -113,6 +113,8 @@ def make_latent_detanet(**kwargs) -> "DetaNet":
         out_type="latent",
         grad_type=None,
         device="cpu",
+        scale=None,
+        atom_ref=None,
     )
     defaults.update(kwargs)
 
