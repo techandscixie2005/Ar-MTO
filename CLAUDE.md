@@ -837,6 +837,98 @@ The Nature-level upgrade additionally requires:
 
 ---
 
+## 13. Next-Stage Nature Evidence Worktrees
+
+The following worktrees (wt-06 through wt-14) implement the Nature-level evidence roadmap beyond the QM9S mainline.
+
+| Worktree | Branch | Local | Server | Purpose |
+|----------|--------|-------|--------|---------|
+| wt-06-data-foundry | feat/06-data-foundry | yes | yes | Dataset registry, download manifests, ingestion/audit plans for QM7-X, QMe14S, experimental spectra, non-chemical data |
+| wt-07-stability-transfer | feat/07-stability-transfer | yes | yes | Seed subspace overlap, principal angles, frozen probes, stage transfer, early plateau diagnostics |
+| wt-08-chemical-interrogation | feat/08-chemical-interrogation | yes | yes | RDKit SMARTS, functional-group enrichment, matched molecular pairs, mode masking, attribution robustness |
+| wt-09-qm9s-spectra | feat/09-qm9s-spectra | optional | yes | QM9S IR/Raman/UV-Vis spectra training, spectral metrics, peak-level analysis |
+| wt-10-experimental-spectra | feat/10-experimental-spectra | yes | yes | NIST/SDBS/nmrshiftdb2/NMRexp registry, molecule matching, spectrum preprocessing, curated experimental case study |
+| wt-11-external-generalization | feat/11-external-generalization | optional | yes | QM7-X conformer/non-equilibrium validation, QMe14S transfer, element OOD, functional-group OOD, spectra generalization |
+| wt-12-universal-tensor-assembly | feat/12-universal-tensor-assembly | yes | yes | Non-chemical Tensor Mode Assembly: synthetic SO(3) multipole tasks, optional ModelNet40/ShapeNet later |
+| wt-13-figures-reporting | feat/13-figures-reporting | yes | optional | Source-data-driven Nature-style figures, reports, source tables, claim-to-evidence maps |
+| wt-14-final-artifact-audit | feat/14-final-artifact-audit | yes | yes | Final reproducibility audit, artifact manifest, result consistency checks, manuscript evidence audit |
+
+### 13.1 Allowed Work per Worktree
+
+**wt-06-data-foundry**: Write registry manifests, download scripts, checksum files, split definitions, ingestion/audit plans. Store only scripts, manifests, checksums, splits, and reports in Git. Treat acquired datasets as read-only. Do NOT download large datasets in setup tasks.
+
+**wt-07-stability-transfer**: Run subspace overlap computations, principal angle analysis, frozen probe training, stage transfer experiments, plateau diagnostics. Compare MTO subspaces across seeds using principal angles, Procrustes alignment, CKA/SVCCA.
+
+**wt-08-chemical-interrogation**: Implement RDKit SMARTS matching, functional-group enrichment with statistical controls, matched molecular pair analysis, mode masking experiments, attribution robustness (Integrated Gradients, occlusion, attention rollout). Always control for molecule size, atom count, heteroatom count, composition, target magnitude, and training-set frequency.
+
+**wt-09-qm9s-spectra**: Train on QM9S IR/Raman/UV-Vis spectra. Implement spectral MSE/MAE, cosine similarity, peak position MAE, top-k peak recall, optional Wasserstein distance. Save representative spectra and failure cases.
+
+**wt-10-experimental-spectra**: Curate 50-500 clean molecules from NIST/SDBS/nmrshiftdb2/NMRexp. Match by SMILES/InChIKey. Align spectra grids. Document solvent/phase/instrument limitations. Compare predicted vs calibrated spectra, peak positions, intensities, and MTO attributions. Include failure cases.
+
+**wt-11-external-generalization**: Run QM7-X conformer perturbation, equilibrium-to-non-equilibrium transfer, QMe14S element OOD, functional-group OOD, spectra generalization. This is strong evidence for Nature-level generality.
+
+**wt-12-universal-tensor-assembly**: Build synthetic SO(3)-structured local-to-global multipole tasks. Compare sum/mean pooling, attention pooling, global token, tensor pooling, and full TMA. Optional: rotated ModelNet40 point-cloud classification. Call the generic method "Tensor Mode Assembly", not MTO.
+
+**wt-13-figures-reporting**: Generate all figures from saved result tables, not manually typed numbers. Each figure: source data CSV/JSON, plotting script, PNG and PDF/SVG, short caption draft, claim supported, limitations. Save under `outputs/reports/`.
+
+**wt-14-final-artifact-audit**: Audit tests, configs, checkpoints, metrics, figures, source data, reports, claim-evidence table. Verify all claims map to evidence. Confirm no scalar-only path was accidentally used as the main model.
+
+### 13.2 Forbidden Work
+
+- No large dataset downloads without explicit user request.
+- No Slurm/training jobs from wt-06 (data registry only).
+- No modification of existing wt-00 through wt-05 worktrees.
+- No deletion or renaming of existing branches or worktrees.
+- No server operations outside `/data/home/scwc008/run/xxy`.
+- No "functional-group enrichment" claims using only atom-type proxies (wt-08).
+- No "MTOs are real molecular orbitals" claims (all worktrees).
+
+### 13.3 Done Criteria per Worktree
+
+- wt-06: Dataset manifests, download scripts, checksums, split files, audit plan committed; QM9S confirmed present on server.
+- wt-07: Subspace overlap, principal angles, frozen probes, stage transfer, plateau diagnostics all run and saved as JSON/CSV.
+- wt-08: SMARTS enrichment with controls, MMP analysis, mode masking, attribution robustness all run; no confounded claims.
+- wt-09: QM9S spectra training complete with all spectral metrics; representative spectra and failure cases saved.
+- wt-10: Curated experimental spectra registry, molecule matching, preprocessing, comparison plots, and case-study report.
+- wt-11: QM7-X conformer and QMe14S transfer results with OOD metrics; failure cases documented.
+- wt-12: Synthetic SO(3) multipole results showing TMA improvement over baselines; optional ModelNet40 results.
+- wt-13: All figures generated from source data; claim-evidence table complete; reports saved.
+- wt-14: Full artifact audit; reproducibility confirmed; claim-evidence mapping verified; manuscript evidence package ready.
+
+---
+
+## 14. Evidence Map
+
+Each evidence claim maps to specific worktrees that must produce verifying results.
+
+| Claim | Worktree(s) | Evidence Type |
+|-------|-------------|---------------|
+| Symmetry correctness | wt-02, wt-03 | Tensor reconstruction error, Wigner-D tests, MTO internal equivariance, output equivariance |
+| Assembly necessity | wt-04 | Matched baselines: direct, sum/mean pooling, attention, global token, scalar-only MTO, no-CG, no-signed-routing, no-gate |
+| Main training evidence | wt-05 | QM9S 5-seed mainline: dipole, polarizability, tensor response, scalar/vector/rank-2 readouts |
+| Data foundation | wt-06 | Dataset registry, manifests, checksums, splits for QM7-X, QMe14S, experimental spectra |
+| Stability and reuse | wt-07 | Subspace overlap across seeds, principal angles, frozen probes, stage transfer, plateau diagnostics |
+| Chemical meaning | wt-08 | SMARTS enrichment with controls, MMP, mode masking, attribution robustness |
+| Spectra on QM9S | wt-09 | IR/Raman/UV-Vis training, spectral metrics, peak analysis, representative spectra |
+| Experimental reality | wt-10 | Curated NIST/SDBS/nmrshiftdb2 matching, spectrum comparison, MTO attribution on real spectra |
+| External generalization | wt-11 | QM7-X conformer, QMe14S element/fg-OOD, spectra generalization |
+| Universal method | wt-12 | Synthetic SO(3) multipole tasks, TMA vs baselines outside chemistry |
+| Reporting | wt-13 | Source-data-driven figures, claim-to-evidence maps, Nature-style reports |
+| Final audit | wt-14 | Reproducibility, artifact manifest, consistency checks, manuscript evidence package |
+
+---
+
+## 15. Planning Documents
+
+Detailed planning documents are maintained alongside this CLAUDE.md:
+
+- `docs/NATURE_WORKTREE_ROADMAP.md` — Full worktree roadmap with phases, dependencies, and milestones.
+- `docs/DATA_FOUNDRY_PLAN.md` — Dataset registry, download manifests, and ingestion strategy.
+- `docs/EXPERIMENTAL_SPECTRA_PLAN.md` — Curated experimental spectra case-study plan.
+- `docs/UNIVERSAL_TENSOR_ASSEMBLY_PLAN.md` — Non-chemical Tensor Mode Assembly plan.
+
+---
+
 ## 12. Final Reminder
 
 The central engineering question is always:
