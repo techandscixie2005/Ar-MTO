@@ -1,0 +1,219 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs}
+\usepackage[colorlinks=true,linkcolor=black,citecolor=blue,urlcolor=blue]{hyperref}
+\usepackage[numbers,sort&compress]{natbib}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\emergencystretch=2em
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\mto}{\mathcal{O}}
+\newcommand{\cg}{\mathrm{CG}}
+
+\title{\bfseries Tensor mode assembly for symmetry-constrained molecular learning}
+\author{Author list to be inserted}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Equivariant neural networks have made molecular geometry learnable by encoding atoms as scalar, vector and tensor fields that obey the symmetries of three-dimensional space. Yet a central step remains implicit: how local equivariant fields become the collective molecular coordinates that govern polarization, delocalization, anisotropy and spectra. Here we introduce MTO-Net, a symmetry-constrained framework that replaces terminal pooling with explicit tensor mode assembly. The method separates deductive structure from inductive content. SO(3)/O(3) irreducible representations, Clebsch-Gordan tensor products and invariant gates specify how local tensors may be composed, whereas data select which whole-molecule modes encode response. In molecules, these assembled modes form molecular tensor orbitals: learned, nonlinear, response-oriented analogues of orbital composition in equivariant representation space. They are not quantum-chemical orbitals, wavefunctions or Hamiltonian eigenstates. Instead, they provide a computable interface for the way chemists infer whole-molecule response from local motifs, conjugation, donor-acceptor structure and polarization. MTO-Net therefore turns local-to-global chemical intuition into a testable, symmetry-preserving representation principle for molecular and other SO(3)-structured systems.
+\end{abstract}
+
+\section*{A missing local-to-global step in molecular learning}
+
+The central object of chemistry is not an isolated atom or bond, but a molecule acting as a coupled whole. A carbonyl group, a heteroatom, a conjugated segment or a polar fragment is local. A dipole moment, a polarizability tensor, an optical transition or a vibrational spectrum is collective. The scientific problem is therefore not only to encode local chemical environments, but to construct the whole-system coordinates through which local environments cooperate, cancel and delocalize.
+
+This local-to-global problem has two different sources. One is deductive. Molecular representations must obey translations, rotations, reflections and permutations of identical atoms. Scalars, vectors and higher-order tensors cannot be mixed arbitrarily, because they transform according to different representations of SO(3) or O(3). The other source is inductive. Which local motifs matter for a particular molecular response is not fixed by symmetry alone; it must be learned from data, experiment or quantum-chemical labels.
+
+Modern equivariant neural networks address the first source with considerable success. Tensor field networks, SE(3)-transformers, e3nn, PaiNN, NequIP, MACE, DetaNet and related architectures build atom-centred features that transform predictably under rotations and reflections\citep{Thomas2018TFN,Fuchs2020SE3Transformer,Geiger2023e3nn,Schutt2021PaiNN,Batzner2022NequIP,Batatia2022MACE,Liao2023Equiformer,Zou2023DetaNet}. These models give molecular learning a language of scalar, vector and tensor features. What is less explicit is the next step: how these typed local fields are assembled into molecular response coordinates.
+
+Most molecular networks answer this question through pooling, attention, set transformers or global tokens\citep{Zaheer2017DeepSets,Lee2019SetTransformer}. These mechanisms can be powerful and empirically accurate. However, for collective response they make a strong representational choice: they compress many local tensor fields into a limited global descriptor before prediction. Such compression can obscure mode structure, tensor type, cancellation, anisotropy and long-range cooperation. This concern is related to graph bottlenecks and over-squashing, but the claim here is more specific\citep{Alon2021Bottleneck,Topping2022OverSquashing}. The bottleneck in response learning is not only graph distance. It is the absence of an explicit, symmetry-typed molecular representation between local equivariant fields and final observables.
+
+MTO-Net addresses this missing step. It replaces terminal compression with a bank of whole-molecule tensor modes. These modes are assembled from atom-centred irreducible tensors by invariant signed routing, Clebsch-Gordan coupling and scalar or tensor-information gating. The resulting representation is still learned from data, but the space in which learning occurs is constrained by symmetry and by a local-to-global composition principle. In short, MTO-Net does not merely ask a neural network to pool a molecule. It asks the network to assemble molecular response modes.
+
+\section*{From pooling to tensor mode assembly}
+
+The distinction between direct pooling and tensor mode assembly can be written schematically. A conventional equivariant molecular predictor often has the form
+\begin{equation}
+\{Z_i,\bm r_i\}_{i=1}^{N}
+\rightarrow \{H_i^{(l)}\}_{i,l}
+\rightarrow \mathrm{pool}(\{H_i^{(l)}\})
+\rightarrow y ,
+\end{equation}
+where $Z_i$ and $\bm r_i$ denote atom identity and position, $H_i^{(l)}$ denotes a local tensor feature of order $l$, and $y$ is a molecular target. MTO-Net instead inserts an explicit molecular representation,
+\begin{equation}
+\{Z_i,\bm r_i\}_{i=1}^{N}
+\rightarrow \{H_i^{(l)}\}_{i,l}
+\rightarrow \{\mto_k^{(l)}\}_{k,l}
+\rightarrow y .
+\end{equation}
+Here $\mto_k^{(l)}$ is the $l$-typed component of molecular mode $k$. The readout no longer receives only one pooled descriptor. It receives a structured bank of scalar, vector and tensor modes.
+
+This step can be understood as higher-order structured pooling. A single invariant vector may be sufficient when a target is mainly additive or local. It is less natural when the target is a response of the whole molecule: two fragments may reinforce or cancel a dipole, several local environments may form a delocalized polarizable path, and anisotropic response may require rank-2 information to survive aggregation. By preserving several tensor-typed molecular objects before readout, MTO-Net gives the model an explicit interface for these collective coordinates.
+
+The mode bank also changes what can be tested. A pooled vector can be visualized, but it has limited internal structure. A tensor mode bank can be aligned across seeds, frozen and probed across tasks, ablated by tensor order, perturbed by fragment masking, and examined for response-specific interventions. The representation is therefore not only a hidden state for prediction. It is an object whose stability, transferability and chemical alignment can be challenged directly.
+
+\section*{Symmetry as the deductive constraint}
+
+MTO-Net treats symmetry as an axiom rather than as a final correction. For each atom $i$, an equivariant encoder returns local irreducible tensor channels
+\begin{equation}
+H_i=\bigoplus_{l=0}^{L_{\max}} H_i^{(l)}, \qquad
+H_i^{(l)}\in \R^{C_l\times(2l+1)} .
+\end{equation}
+Under a rotation or reflection $R$, the order-$l$ channel transforms as
+\begin{equation}
+H_i^{(l)}(RX)=D^{(l)}(R)H_i^{(l)}(X),
+\end{equation}
+where $D^{(l)}(R)$ is the corresponding Wigner representation. The $l=0$ channel is scalar-like, the $l=1$ channel is vector-like and the $l=2$ channel is quadrupolar or rank-2-like. These features are not ordinary hidden vectors. Their allowed linear maps, products and nonlinearities are restricted by representation theory.
+
+The first assembly operation is invariant atom-to-mode routing. For each molecular mode $k$, scalar atom information and a learned mode embedding generate routing scores and order-specific signs:
+\begin{align}
+e_{ki} &= f_{\mathrm{route}}(H_i^{(0)}, q_k, Z_i), &
+a_{ki} &= \mathrm{softmax}_i(e_{ki}),\\
+s_{ki}^{(l)} &= \tanh f_{\mathrm{sign},l}(H_i^{(0)}, q_k, Z_i), &
+c_{ki}^{(l)} &= \frac{a_{ki}s_{ki}^{(l)}}{\epsilon+\sum_j |a_{kj}s_{kj}^{(l)}|}.
+\end{align}
+The precursor of mode $k$ is
+\begin{equation}
+P_k^{(l)}=\sum_i c_{ki}^{(l)} W_l H_i^{(l)} .
+\end{equation}
+Because $c_{ki}^{(l)}$ is invariant, it can modulate amplitudes without changing tensor type. The signs allow local contributions to reinforce or cancel, but they should not be identified automatically with bonding or antibonding phases. They are learned response coefficients in an equivariant latent space.
+
+Cross-order interaction is introduced through Clebsch-Gordan tensor products. For irreducible tensors $U^{(l_1)}$ and $V^{(l_2)}$,
+\begin{equation}
+\left[U^{(l_1)}\otimes_{\cg}V^{(l_2)}\right]^{(L)}_m
+=
+\sum_{m_1,m_2}
+C^{Lm}_{l_1m_1,l_2m_2}
+U^{(l_1)}_{m_1}V^{(l_2)}_{m_2},
+\qquad
+|l_1-l_2|\leq L\leq l_1+l_2 .
+\end{equation}
+This operation is the representation-legal way to let tensor orders interact. For example, two vector-like channels can produce scalar, vector and rank-2 components. In molecular language, this is the neural analogue of allowing different angular structures to participate in a collective response mode without leaving the symmetry-allowed space.
+
+Nonlinearity is introduced by invariant gates. Let $I_k$ collect scalar information derived from scalar channels, tensor norms and scalar contractions. A gated update has the form
+\begin{equation}
+\widetilde{\mto}_k^{(l)}
+=
+\gamma_k^{(l)}(I_k)\mto_k^{(l)} .
+\end{equation}
+The gate is invariant and the object being gated is equivariant; their product remains equivariant. This point is essential. MTO-Net is not a linear LCAO replica placed inside a neural network. It is a nonlinear, symmetry-preserving mode assembly mechanism.
+
+\section*{Molecular tensor orbitals}
+
+The molecular instantiation of this principle is called a molecular tensor orbital. The name is intentional but bounded. In molecular orbital theory, atom-centred basis functions are assembled into molecule-level orbitals. In MTO-Net, atom-centred equivariant tensor fields are assembled into molecule-level tensor response modes. The analogy is grounded in representation language: atomic orbital angular structures and SO(3) irreducible tensor orders share the same hierarchy. An $s$-like component is scalar-like, a $p$-like component is vector-like and a $d$-like component is rank-2-like.
+
+This correspondence gives MTO-Net a chemical interpretation that ordinary pooling lacks. Conventional molecular graph neural networks often inherit an atom-bond language reminiscent of valence-bond or fragment reasoning. They can learn nonlocal effects through depth, attention and global states, but the molecular representation is usually not an explicit bank of delocalized tensor modes. MTO-Net adds a complementary orbital-like language: local tensor ingredients are assembled into whole-molecule response coordinates before prediction.
+
+The boundary of the analogy must remain strict. Molecular tensor orbitals are not quantum-chemical molecular orbitals, Kohn-Sham orbitals, wavefunctions, Hamiltonian eigenstates, density matrices, occupied states or virtual states. Electronic-structure learning methods that predict orbitals, Hamiltonians or wavefunction-related quantities address a different object\citep{Schutt2019SchNOrb,Qiao2020OrbNet,Qiao2022OrbNetEqui,Li2022DeepH,Gong2023DeepHE3,Yu2023QHNet,Yu2023QH9}. MTO-Net learns response-oriented latent modes under symmetry constraints. It does not solve the Schrodinger equation or perform self-consistent-field iterations at inference time.
+
+This distinction is not a weakness. It is what makes the framework compatible with data-driven chemical intuition. The model does not claim to reproduce quantum mechanics internally. It uses the same symmetry language that quantum mechanics respects, then lets data determine which assembled modes are useful for molecular response. In this sense, MTO-Net separates the law-like part of the representation from the empirical part of learning.
+
+\section*{Making chemical intuition computable}
+
+Chemists often reason about a molecule before performing expensive first-principles calculations. They recognize functional groups, conjugated paths, donor and acceptor regions, heteroatoms, steric constraints and polar fragments. They then infer how these local motifs may cooperate, cancel or delocalize in the whole molecule. This reasoning is inductive, but it is not unconstrained. It is shaped by geometry, symmetry and the known behavior of chemical fragments.
+
+MTO-Net formalizes this activity. Local chemical evidence enters through atom-centred equivariant features. Fragment cooperation and cancellation enter through signed routing. Delocalization enters through molecular mode assembly. Polarization and anisotropy enter through vector and rank-2 tensor modes. Nonlinear chemical context enters through invariant gates. The result is not a verbal explanation attached after prediction, but an architectural layer where structure-response intuition can be encoded, learned and tested.
+
+The claim is representational rather than ontological. If a learned mode aligns with a carbonyl, a conjugated bridge, a donor-acceptor axis or a polar fragment, that does not make it a true orbital. It means the model has found a stable response coordinate that can be compared with chemical concepts. Such a coordinate should be judged by controlled tests: fragment enrichment, matched null molecules, composition controls, seed stability, frozen probes and interventions. A mode is chemically meaningful only if it supports prediction and behaves consistently under perturbations that chemists would recognize as relevant.
+
+This is the sense in which MTO-Net quantifies chemical intuition. It does not replace quantum chemistry as a deductive theory. It gives data-driven learning a symmetry-respecting representation for the inductive step that chemists perform when they infer whole-molecule behavior from local motifs.
+
+\section*{Validation logic}
+
+The empirical manuscript should test six claims. First, internal modes and outputs must satisfy equivariance. Scalars should remain invariant; vector and tensor quantities should transform according to the appropriate Wigner actions. Second, the model should be evaluated on molecular response tasks such as dipoles, polarizabilities and spectral labels from public datasets including QM9 and QM9S where appropriate\citep{Ramakrishnan2014QM9,Zou2023QM9S}. Third, MTO-Net should be compared with matched direct pooling, attention pooling, global-token readouts and strong equivariant baselines.
+
+Fourth, the mode bank should be tested for stability. Since mode slots may permute, flip signs or rotate within degenerate subspaces, stability should be assessed by subspace metrics rather than naive slot matching. Principal angles, Procrustes alignment, canonical correlation analysis or SVCCA can ask whether independent training runs recover related response subspaces.
+
+Fifth, the representation should be tested for reuse. Frozen-probe and stage-transfer experiments can determine whether modes learned for one response family help predict another, or whether they are merely task-specific hidden variables. Sixth, ablations should remove signed routing, Clebsch-Gordan coupling, tensor orders, gates and the mode bank itself under matched capacity and training budgets. These tests separate the contribution of the MTO principle from simple parameter count.
+
+Interpretability should be treated as a falsifiable hypothesis. Visualization alone is insufficient. Fragment enrichment, matched null controls and mode interventions should ask whether a selected mode is associated with the claimed chemical structure rather than with atom count, composition, size or other confounders. If masking, amplifying or swapping a mode changes predictions in property-specific ways, the mode becomes a testable response coordinate rather than a decorative latent feature.
+
+\section*{Beyond molecules}
+
+Although the molecular setting gives the clearest name to the construction, the principle is broader than chemistry. Many scientific systems are built from local fields that transform under SO(3) or O(3) and generate collective observables. Materials response, phonon-coupled properties, chiral optical response, protein deformation and mesoscale fields all contain local geometric information that must be assembled into whole-system modes.
+
+In such domains the modes would not be called molecular tensor orbitals. The general idea would remain: local equivariant fields are routed, coupled and gated into tensor-typed collective modes before prediction. Periodic systems add translation symmetry and may require Bloch-like neural mode structure or reciprocal-space capacity priors. These extensions are natural because the core principle is not tied to molecular orbital theory itself. It is a symmetry-constrained local-to-global assembly principle, with molecular tensor orbitals as its chemical instantiation.
+
+\clearpage
+\section*{Figure legends}
+
+\textbf{Fig. 1 | The local-to-global gap in equivariant molecular learning.}
+Equivariant encoders produce atom-centred scalar, vector and tensor fields. Standard readouts compress these local fields into a pooled descriptor or global token. MTO-Net inserts a symmetry-constrained assembly layer that constructs molecule-level tensor modes before readout.
+
+\textbf{Fig. 2 | Tensor mode assembly replaces terminal pooling.}
+Direct pooling maps local tensor fields to one global representation. MTO-Net maps them to a bank of tensor-typed molecular modes $\{\mto_k^{(l)}\}_{k,l}$. The mode bank preserves mode index and tensor order, allowing response coordinates to be tested by stability, transfer, ablation and intervention.
+
+\textbf{Fig. 3 | Symmetry-constrained operations in MTO-Net.}
+Local irreducible tensors are combined by invariant signed routing, Clebsch-Gordan tensor products and invariant gates. Routing coefficients and gates are scalars under rotations and reflections, whereas the assembled modes remain equivariant tensors.
+
+\textbf{Fig. 4 | Molecular tensor orbitals as a response-oriented orbital analogue.}
+Atomic orbital angular structures and equivariant tensor orders share the SO(3) hierarchy: $s$-like, $p$-like and $d$-like components correspond naturally to $l=0$, $l=1$ and $l=2$ tensor channels. MTOs are learned latent response modes, not quantum-chemical orbitals or wavefunctions.
+
+\textbf{Fig. 5 | Quantifying chemical intuition.}
+Functional groups, conjugated paths, donor-acceptor motifs, polar fragments and anisotropic environments enter through atom-centred tensor fields and are assembled into response modes. Chemical meaning should be tested with enrichment, matched nulls, composition controls and interventions.
+
+\textbf{Fig. 6 | Validation of the MTO principle.}
+The empirical validation should test equivariance, accuracy, seed and subspace stability, transferability, architectural necessity and chemical interpretability. Each test challenges a distinct part of the claim that the mode bank is a reusable molecular response representation.
+
+\clearpage
+\section*{Methods}
+
+\subsection*{Local equivariant encoder}
+
+MTO-Net begins with an equivariant molecular encoder. The encoder maps atom identities and coordinates to local irreducible tensor features $H_i^{(l)}$. The MTO layer is defined after this local encoding step and is therefore a local-to-global representation module rather than a replacement for geometric message passing.
+
+\subsection*{Mode capacity}
+
+The number of modes $K$ is a capacity choice. A fixed $K$ can be used for generic systems. In molecular applications, a valence-adaptive rule such as $K=\sum_i v(Z_i)$ may be used as a chemically motivated prior, with padding and masking in minibatches. This choice does not imply that each mode is an electron, an occupied orbital or a quantum state.
+
+\subsection*{Invariant signed routing}
+
+For each mode $k$, invariant routing networks compute atom weights and signs from scalar atom information, atom identity and learned mode embeddings. The signed coefficient $c_{ki}^{(l)}$ is an invariant scalar. Therefore the routed sum $P_k^{(l)}=\sum_i c_{ki}^{(l)}W_lH_i^{(l)}$ transforms as an order-$l$ tensor whenever the local inputs do.
+
+\subsection*{Clebsch-Gordan coupling}
+
+Interactions between tensor orders are computed by Clebsch-Gordan tensor products followed by projection to allowed output orders. For each output order $L$, the coupled tensor transforms according to $D^{(L)}(R)$. Channel mixing may be applied before and after tensor products, provided it acts only within representation-compatible spaces.
+
+\subsection*{Invariant gates}
+
+Nonlinear modulation is introduced by gates computed from invariant quantities, including scalar channels, tensor norms and scalar contractions. Multiplying an equivariant tensor by an invariant gate preserves equivariance while allowing context-dependent response modulation.
+
+\subsection*{Readout rules}
+
+Scalar targets can be read from $l=0$ modes. Vector targets can be read from $l=1$ modes. Rank-2 response tensors can combine an isotropic scalar component with a traceless $l=2$ component mapped to Cartesian tensor form. Each readout should be validated under rotations, reflections, translations and atom permutations.
+
+\subsection*{Planned empirical checks}
+
+The completed experimental manuscript should report locked data splits, repeated seeds, matched baselines, uncertainty estimates and source data. Equivariance checks should be applied to both outputs and internal MTO tensors. Stability should be assessed with subspace metrics invariant to slot permutation and sign freedom. Interpretability should rely on controlled enrichment and interventions rather than visualization alone.
+
+\section*{Data availability}
+
+No new dataset is released with this methodological draft. The completed experimental manuscript should provide dataset provenance, locked splits, preprocessing scripts and source data for all reported figures.
+
+\section*{Code availability}
+
+A code archive should accompany the completed experimental manuscript. The archive should include the MTO-Net implementation, environment files, training commands, evaluation scripts and figure-generation scripts.
+
+\section*{Acknowledgements}
+
+Acknowledgements to be inserted.
+
+\section*{Author contributions}
+
+Author contributions to be inserted.
+
+\section*{Competing interests}
+
+The authors declare no competing interests. This statement should be checked before submission.
+
+\bibliographystyle{unsrtnat}
+\bibliography{references}
+
+\end{document}

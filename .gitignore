@@ -1,0 +1,49 @@
+# Data
+data/
+
+# Outputs
+outputs/
+
+# Checkpoints
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+
+# Logs
+logs/
+*.log
+
+# Weights & Biases
+wandb/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# NumPy arrays (large)
+*.npz
+*.npy
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Build
+dist/
+build/
+*.egg-info/
