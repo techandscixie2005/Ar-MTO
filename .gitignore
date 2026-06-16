@@ -50,3 +50,12 @@ build/
 
 # Vendored third-party source (not our repo)
 third_party/DetaNet/
+
+# Training runs
+runs/
+
+# Claude Code
+.claude/worktrees/
+
+# OMC
+.omc/logs/
