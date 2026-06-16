@@ -47,3 +47,6 @@ __pycache__/
 dist/
 build/
 *.egg-info/
+
+# Vendored third-party source (not our repo)
+third_party/DetaNet/
