@@ -1,0 +1,197 @@
+{
+  "title": "MTO-Net External Dataset Download Manifest",
+  "description": "Records all download operations for external datasets. Each entry captures the download command, source URL, destination, file size, checksum, and outcome.",
+  "generated": "2026-06-17",
+  "branch": "feat/06-data-foundry",
+  "downloads": [
+    {
+      "dataset_id": "qm9s",
+      "status": "pre_existing",
+      "note": "QM9S was already present on the server at /data/home/scwc008/run/xxy/MTO/data/qm9s before this data foundry task. See FIGSHARE_ALL_FILES_MANIFEST.json for original download details.",
+      "timestamp": "2026-06-07",
+      "url": "https://figshare.com/s/889262a4e999b5c9a5b3",
+      "article_id": 24235333,
+      "destination": "/data/home/scwc008/run/xxy/MTO/data/qm9s",
+      "server_direct": true,
+      "local_fallback_used": false
+    },
+    {
+      "dataset_id": "qm7x",
+      "file": "8000.xz",
+      "status": "success",
+      "timestamp": "2026-06-17T14:16:00Z",
+      "url": "https://zenodo.org/records/3905361/files/8000.xz?download=1",
+      "destination": "/mnt/e/Ar-MTO-data-foundry/qm7x/8000.xz",
+      "size_bytes": 89426884,
+      "expected_md5": "md5:c893ae88b8f5c32541c3f024fc1daa45",
+      "server_direct": false,
+      "local_fallback_used": true,
+      "upload_to_server": false,
+      "note": "Downloaded locally due to HPC DNS issues with zenodo.org"
+    },
+    {
+      "dataset_id": "qm7x",
+      "file": "README.txt",
+      "status": "success",
+      "timestamp": "2026-06-17T14:14:00Z",
+      "url": "https://zenodo.org/records/3905361/files/README.txt?download=1",
+      "destination": "/mnt/e/Ar-MTO-data-foundry/qm7x/README.txt",
+      "size_bytes": 3126,
+      "expected_md5": "md5:649cb964abef05011939a5dcd380b173",
+      "server_direct": false,
+      "local_fallback_used": true,
+      "upload_to_server": false
+    },
+    {
+      "dataset_id": "qm7x",
+      "file": "createDB.py",
+      "status": "success",
+      "timestamp": "2026-06-17T14:14:00Z",
+      "url": "https://zenodo.org/records/3905361/files/createDB.py?download=1",
+      "destination": "/mnt/e/Ar-MTO-data-foundry/qm7x/createDB.py",
+      "size_bytes": 3038,
+      "expected_md5": "md5:29f0cf5803e5f5568de52ad8045962d3",
+      "server_direct": false,
+      "local_fallback_used": true,
+      "upload_to_server": false
+    },
+    {
+      "dataset_id": "nmrexp",
+      "file": "NMRexp_10to24_1_0811.py",
+      "status": "success",
+      "timestamp": "2026-06-17T14:14:00Z",
+      "url": "https://zenodo.org/records/17296666/files/NMRexp_10to24_1_0811.py?download=1",
+      "destination": "/data/home/scwc008/run/xxy/MTO/data/external/nmrexp/raw/",
+      "size_bytes": 218133,
+      "server_direct": true,
+      "local_fallback_used": false
+    },
+    {
+      "dataset_id": "nmrexp",
+      "file": "F_50_checked.csv",
+      "status": "success",
+      "timestamp": "2026-06-17T14:14:00Z",
+      "url": "https://zenodo.org/records/17296666/files/F_50_checked.csv?download=1",
+      "destination": "/data/home/scwc008/run/xxy/MTO/data/external/nmrexp/raw/",
+      "size_bytes": 20152,
+      "server_direct": true,
+      "local_fallback_used": false
+    },
+    {
+      "dataset_id": "nmrexp",
+      "file": "hetero_200_checked.csv",
+      "status": "success",
+      "timestamp": "2026-06-17T14:14:00Z",
+      "url": "https://zenodo.org/records/17296666/files/hetero_200_checked.csv?download=1",
+      "destination": "/data/home/scwc008/run/xxy/MTO/data/external/nmrexp/raw/",
+      "size_bytes": 73922,
+      "server_direct": true,
+      "local_fallback_used": false
+    },
+    {
+      "dataset_id": "nmrexp",
+      "file": "test_300_checked.csv",
+      "status": "success",
+      "timestamp": "2026-06-17T14:14:00Z",
+      "url": "https://zenodo.org/records/17296666/files/test_300_checked.csv?download=1",
+      "destination": "/data/home/scwc008/run/xxy/MTO/data/external/nmrexp/raw/",
+      "size_bytes": 254418,
+      "server_direct": true,
+      "local_fallback_used": false
+    },
+    {
+      "dataset_id": "nmrexp",
+      "file": "Si_50_checked.csv",
+      "status": "success",
+      "timestamp": "2026-06-17T14:14:00Z",
+      "url": "https://zenodo.org/records/17296666/files/Si_50_checked.csv?download=1",
+      "destination": "/data/home/scwc008/run/xxy/MTO/data/external/nmrexp/raw/",
+      "size_bytes": 18343,
+      "server_direct": true,
+      "local_fallback_used": false
+    },
+    {
+      "dataset_id": "nmrexp",
+      "file": "P_50_checked.csv",
+      "status": "success",
+      "timestamp": "2026-06-17T14:14:00Z",
+      "url": "https://zenodo.org/records/17296666/files/P_50_checked.csv?download=1",
+      "destination": "/data/home/scwc008/run/xxy/MTO/data/external/nmrexp/raw/",
+      "size_bytes": 18746,
+      "server_direct": true,
+      "local_fallback_used": false
+    },
+    {
+      "dataset_id": "nmrexp",
+      "file": "B_50_checked.csv",
+      "status": "success",
+      "timestamp": "2026-06-17T14:14:00Z",
+      "url": "https://zenodo.org/records/17296666/files/B_50_checked.csv?download=1",
+      "destination": "/data/home/scwc008/run/xxy/MTO/data/external/nmrexp/raw/",
+      "size_bytes": 17758,
+      "server_direct": true,
+      "local_fallback_used": false
+    },
+    {
+      "dataset_id": "nmrexp",
+      "file": "NMRexp_10to24_1_1004.parquet",
+      "status": "failed_partial",
+      "timestamp": "2026-06-17T14:17:00Z",
+      "url": "https://zenodo.org/records/17296666/files/NMRexp_10to24_1_1004.parquet?download=1",
+      "destination": "/mnt/e/Ar-MTO-data-foundry/nmrexp/",
+      "size_bytes_expected": 661259287,
+      "size_bytes_actual": 13082624,
+      "server_direct": false,
+      "local_fallback_used": true,
+      "note": "Partial download (13 MB of 661 MB). HPC DNS issues; local download interrupted. Retry needed."
+    }
+  ],
+  "pending_downloads": [
+    {
+      "dataset_id": "qm7x",
+      "files": ["1000.xz", "2000.xz", "3000.xz", "4000.xz", "5000.xz", "6000.xz", "7000.xz"],
+      "total_size_gb": 9.53,
+      "source": "https://zenodo.org/records/3905361",
+      "method": "Local download with robust_downloader.py, then rsync to HPC",
+      "destination_server": "/data/home/scwc008/run/xxy/MTO/data/external/qm7x/raw/",
+      "fallback": "/mnt/e/Ar-MTO-data-foundry/qm7x/"
+    },
+    {
+      "dataset_id": "nmrexp",
+      "files": [
+        "NMRexp_10to24_1_1004.csv",
+        "NMRexp_10to24_1_1004.parquet",
+        "NMRexp_10to24_1_1004_sc_less_than_1.parquet"
+      ],
+      "total_size_gb": 3.33,
+      "source": "https://zenodo.org/records/17296666",
+      "method": "Local download with robust_downloader.py, then rsync to HPC",
+      "destination_server": "/data/home/scwc008/run/xxy/MTO/data/external/nmrexp/raw/",
+      "fallback": "/mnt/e/Ar-MTO-data-foundry/nmrexp/"
+    },
+    {
+      "dataset_id": "qme14s",
+      "url": "https://figshare.com/s/889262a4e999b5c9a5b3",
+      "method": "Manual browser access recommended. Figshare API search did not resolve the QMe14S article ID (separate from QM9S article 24235333). Open the share link in a browser, locate the QMe14S article, then use download_qme14s.sh.",
+      "destination": "/data/home/scwc008/run/xxy/MTO/data/external/qme14s/raw/",
+      "fallback": "/mnt/e/Ar-MTO-data-foundry/qme14s/"
+    },
+    {
+      "dataset_id": "nmrshiftdb2",
+      "url": "https://sourceforge.net/projects/nmrshiftdb2/",
+      "method": "No public bulk download endpoint confirmed. SourceForge project exists but files may not be available for bulk download. Check project page and contact maintainers for data access.",
+      "destination": "/data/home/scwc008/run/xxy/MTO/data/external/nmrshiftdb2/raw/",
+      "fallback": "/mnt/e/Ar-MTO-data-foundry/nmrshiftdb2/"
+    }
+  ],
+  "manual_registry_only": [
+    {
+      "dataset_id": "nist_webbook",
+      "note": "Manual curation only. No bulk download. See license_citation_access_notes.md for access policy."
+    },
+    {
+      "dataset_id": "sdbs_aist",
+      "note": "Manual curation only. No bulk download. See license_citation_access_notes.md for access policy."
+    }
+  ]
+}

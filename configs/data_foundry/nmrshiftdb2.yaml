@@ -1,0 +1,45 @@
+# nmrshiftdb2 Dataset Configuration
+# Purpose: open experimental NMR source with assigned spectra
+
+dataset_id: nmrshiftdb2
+display_name: nmrshiftdb2
+description: >
+  Open-source NMR database with assigned chemical shifts, raw data,
+  and NMReDATA SD files. Hosted by University of Cologne.
+
+source:
+  url_homepage: https://nmrshiftdb.nmr.uni-koeln.de/
+  url_sourceforge: https://sourceforge.net/projects/nmrshiftdb2/
+  paper: "nmrshiftdb2: A Database for NMR Chemical Shifts"
+  doi: null  # Fill from source
+  year: null
+  journal: null
+
+server_path: /data/home/scwc008/run/xxy/MTO/data/external/nmrshiftdb2
+local_fallback: /mnt/e/Ar-MTO-data-foundry/nmrshiftdb2
+
+raw_subdirs:
+  raw: raw/
+  checksums: checksums/
+  manifests: manifests/
+
+nuclei:
+  - 1H
+  - 13C
+  - 15N (limited)
+  - 19F (limited)
+  - 31P (limited)
+
+spectrum_types:
+  - assigned_chemical_shifts
+  - raw_fid (where available)
+  - peak_lists
+  - NMReDATA (SD files with assigned shifts)
+
+project_role: experimental_nmr_reference
+limitations:
+  - Not all entries have raw FID/peak lists
+  - Assignment quality varies
+  - Solvent/condition metadata may be incomplete
+  - Download only if public archive endpoint available
+status: pending_download

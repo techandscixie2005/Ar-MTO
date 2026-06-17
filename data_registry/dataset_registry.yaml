@@ -1,0 +1,383 @@
+# MTO-Net Unified Dataset Registry
+# =============================================================================
+# Single source of truth for all datasets used in the MTO-Net project.
+# Updated: 2026-06-17
+# Branch: feat/06-data-foundry
+# =============================================================================
+
+datasets:
+
+  # ---------------------------------------------------------------------------
+  # A. QM9S — Primary training dataset
+  # ---------------------------------------------------------------------------
+  - dataset_id: qm9s
+    display_name: QM9S
+    version_or_access_date: "2026-06-07"
+    source_url: https://figshare.com/s/889262a4e999b5c9a5b3
+    paper_or_citation: "QM9S: A Comprehensive Spectral Dataset for Small Organic Molecules"
+    doi: null
+    license_or_access_status: >
+      Public dataset on Figshare. License embedded in Figshare article metadata.
+      Check figshare_article_24235333.json for exact license terms.
+    local_server_path: /data/home/scwc008/run/xxy/MTO/data/qm9s
+    local_fallback_path: null
+    raw_files:
+      - qm9s.pt (2.68 GiB)
+      - qm9s_csv.zip (3.46 GiB)
+      - ir_boraden.csv (8.13 GiB)
+      - raman_boraden.csv (8.18 GiB)
+      - uv_boraden.csv (1.43 GiB)
+      - ext_val.zip (133 MiB)
+      - ext_val_env.zip (134 MiB)
+      - readme.txt
+      - atomic_energy_reference.txt
+      - FIGSHARE_ALL_FILES_MANIFEST.json
+      - figshare_article_24235333.json
+      - subset_smoke/
+      - subset_medium/
+    checksum_manifest: null  # To be computed
+    file_manifest: /data/home/scwc008/run/xxy/MTO/data/qm9s/FIGSHARE_ALL_FILES_MANIFEST.json
+    molecule_count: ~134000
+    elements: [H, C, N, O, F]
+    target_types:
+      - scalar (dipole_magnitude, homo, lumo, gap, zpve, U0, U, H, G, Cv)
+      - tensor (polarizability 3x3)
+      - spectral (IR, Raman, UV-Vis)
+    spectra_types:
+      - IR (broadened, computed)
+      - Raman (broadened, computed)
+      - UV-Vis (broadened, computed)
+    planned_project_role: primary_training
+    limitations:
+      - QM9 chemical space only (<=9 heavy atoms, H/C/N/O/F)
+      - Computed spectra only, no experimental validation
+      - Single equilibrium conformer per molecule
+    status: available_full
+
+  # ---------------------------------------------------------------------------
+  # B. QMe14S — Broader chemistry, transfer and OOD
+  # ---------------------------------------------------------------------------
+  - dataset_id: qme14s
+    display_name: QMe14S
+    version_or_access_date: "2026-06-17"
+    source_url: https://figshare.com/s/889262a4e999b5c9a5b3
+    investigation_note: >
+      The Figshare share link above is consistently referenced as the QMe14S
+      download location. However, the underlying Figshare article ID for QMe14S
+      (separate from QM9S article 24235333) could not be resolved via the
+      Figshare public API. The share page may have been updated to include
+      QMe14S as a separate article, but the API search index may lag.
+      Manual browser access to the share link is recommended to confirm
+      available files.
+    paper_or_citation: >
+      "QMe14S, A Comprehensive and Efficient Spectral Dataset for Small
+      Organic Molecules", J. Phys. Chem. Lett. 2025, 16(16), 3972-3979
+    doi: "10.1021/acs.jpclett.5c00839"
+    arxiv: "2501.18876"
+    license_or_access_status: >
+      Public dataset on Figshare. Check Figshare article metadata for exact
+      license terms. Expected CC BY or similar open license.
+    local_server_path: /data/home/scwc008/run/xxy/MTO/data/external/qme14s
+    local_fallback_path: /mnt/e/Ar-MTO-data-foundry/qme14s
+    raw_files: []  # To be populated after Figshare article ID confirmed
+    checksum_manifest: null
+    file_manifest: null
+    molecule_count: 186102
+    elements: [H, Li, B, C, N, O, F, Na, Mg, Si, P, S, Cl, Br]
+    functional_groups: 47
+    level_of_theory: "B3LYP/TZVP (DFT)"
+    target_types:
+      - scalar (energy, atomic_charge, dipole_magnitude)
+      - vector (atomic_force, dipole_moment)
+      - tensor (polarizability, quadrupole, octupole, first_hyperpolarizability, Hessian)
+      - spectral (IR, Raman, NMR 1H/13C)
+    spectra_types:
+      - IR (harmonic, computed)
+      - Raman (harmonic, computed)
+      - NMR (computed, 1H and 13C)
+    planned_project_role: transfer_and_ood
+    limitations:
+      - Computed spectra only
+      - Single conformer per molecule (plus AIMD configurations)
+      - NMR is DFT-computed, not experimental
+      - Figshare article ID needs manual confirmation
+    status: pending_download
+
+  # ---------------------------------------------------------------------------
+  # C. QM7-X — Conformer/non-equilibrium validation
+  # ---------------------------------------------------------------------------
+  - dataset_id: qm7x
+    display_name: QM7-X
+    version_or_access_date: "2026-06-17"
+    source_url: https://zenodo.org/records/3905361
+    supplementary_url: https://zenodo.org/records/4288677
+    paper_or_citation: >
+      "QM7-X: A comprehensive dataset of quantum-mechanical properties
+      spanning the chemical space of small organic molecules",
+      Scientific Data 8, 43 (2021)
+    doi: "10.1038/s41597-021-00812-2"
+    license_or_access_status: >
+      Creative Commons Attribution 4.0 International (CC BY 4.0).
+      See Zenodo record for details.
+    local_server_path: /data/home/scwc008/run/xxy/MTO/data/external/qm7x
+    local_fallback_path: /mnt/e/Ar-MTO-data-foundry/qm7x
+    raw_files:
+      - 1000.xz (0.72 GB, md5:b50c6a5d0a4493c274368cf22285503e)
+      - 2000.xz (1.04 GB, md5:4418a813daf5e0d44aa5a26544249ee6)
+      - 3000.xz (2.05 GB, md5:f7b5aac39a745f11436047c12d1eb24e)
+      - 4000.xz (1.46 GB, md5:26819601705ef8c14080fa7fc69decd4)
+      - 5000.xz (1.14 GB, md5:85ac444596b87812aaa9e48d203d0b70)
+      - 6000.xz (2.02 GB, md5:787fc4a9036af0e67c034a30adc54c07)
+      - 7000.xz (1.10 GB, md5:5ecce00a188410d06b747cb683d8d347)
+      - 8000.xz (0.09 GB, md5:c893ae88b8f5c32541c3f024fc1daa45)
+      - README.txt (3 KB)
+      - createDB.py (3 KB)
+    checksum_manifest: qm7x/manifests/checksums.csv
+    file_manifest: qm7x/manifests/file_manifest.csv
+    molecule_count: 6950
+    total_structures: ~4200000
+    elements: [H, C, N, O, S, Cl]  # QM7 elements (verify from README)
+    target_types:
+      - scalar (total_energy, homo, lumo, gap, atomization_energy)
+      - tensor (polarizability, dipole_moment)
+      - conformer (energy variation, property variation)
+    spectra_types: []  # No spectral data in QM7-X
+    planned_project_role: conformer_validation
+    limitations:
+      - Large total size (~40+ GiB)
+      - Single-molecule systems only
+      - DFT-level computation
+      - No spectral targets (energies and tensor properties only)
+    status: available_partial  # 8000.xz + README + createDB.py downloaded; larger files pending
+
+  # ---------------------------------------------------------------------------
+  # D. nmrshiftdb2 — Open experimental NMR
+  # ---------------------------------------------------------------------------
+  - dataset_id: nmrshiftdb2
+    display_name: nmrshiftdb2
+    version_or_access_date: "2026-06-17"
+    source_url: https://nmrshiftdb.nmr.uni-koeln.de/
+    sourceforge_url: https://sourceforge.net/projects/nmrshiftdb2/
+    paper_or_citation: "nmrshiftdb2: A Database for NMR Chemical Shifts"
+    doi: null
+    license_or_access_status: >
+      Open access database. Check nmrshiftdb2 website and SourceForge
+      for specific license terms. NMReDATA SD files available where present.
+      Attribution to University of Cologne required.
+    local_server_path: /data/home/scwc008/run/xxy/MTO/data/external/nmrshiftdb2
+    local_fallback_path: /mnt/e/Ar-MTO-data-foundry/nmrshiftdb2
+    raw_files: []  # To be populated if download succeeds
+    checksum_manifest: null
+    file_manifest: null
+    molecule_count: null
+    elements: null
+    target_types:
+      - nmr_chemical_shifts (1H, 13C, 15N, 19F, 31P)
+      - assigned_peak_lists
+    spectra_types:
+      - NMR assigned shifts
+      - NMReDATA SD files
+      - raw FID (limited)
+      - peak lists
+    planned_project_role: experimental_nmr_reference
+    limitations:
+      - Variable assignment quality
+      - Not all entries have raw data
+      - Solvent/condition metadata completeness varies
+      - Download only if public archive endpoint exists
+    status: pending_download
+
+  # ---------------------------------------------------------------------------
+  # E. NMRexp — Large-scale experimental NMR
+  # ---------------------------------------------------------------------------
+  - dataset_id: nmrexp
+    display_name: NMRexp
+    version_or_access_date: "2026-06-17"
+    source_url: https://zenodo.org/records/17296666
+    paper_or_citation: "NMRexp: A database of 3.37 million experimental NMR spectra"
+    doi: "10.1038/s41597-025-06245-5"
+    zenodo_doi: "10.5281/zenodo.17296666"
+    license_or_access_status: >
+      Creative Commons Attribution 4.0 International (CC BY 4.0).
+      Confirmed on Zenodo record 17296666.
+    local_server_path: /data/home/scwc008/run/xxy/MTO/data/external/nmrexp
+    local_fallback_path: /mnt/e/Ar-MTO-data-foundry/nmrexp
+    raw_files:
+      - NMRexp_10to24_1_1004.csv (2.14 GB) - main CSV data
+      - NMRexp_10to24_1_1004.parquet (661 MB) - Parquet format
+      - NMRexp_10to24_1_1004_sc_less_than_1.parquet (528 MB) - subset
+      - NMRexp_10to24_1_0811.py (218 KB) - extraction script
+      - F_50_checked.csv (20 KB) - 19F validation set
+      - hetero_200_checked.csv (74 KB) - heteroatom validation
+      - test_300_checked.csv (254 KB) - test set
+      - Si_50_checked.csv (18 KB) - 29Si validation
+      - P_50_checked.csv (19 KB) - 31P validation
+      - B_50_checked.csv (18 KB) - 11B validation
+    checksum_manifest: nmrexp/manifests/checksums.csv
+    file_manifest: nmrexp/manifests/file_manifest.csv
+    molecule_count: null  # ~200,000 PDFs processed
+    record_count_claimed: 3372987
+    nuclei:
+      - 1H (1,667,135 records)
+      - 13C (1,455,670 records)
+      - 19F (197,186 records)
+      - 31P (33,456 records)
+      - 11B (17,143 records)
+      - 29Si (2,397 records)
+    target_types:
+      - nmr_chemical_shifts
+      - nmr_peak_lists
+      - j_coupling_constants
+      - multiplicities
+      - solvents
+    spectra_types:
+      - 1H NMR
+      - 13C NMR
+      - 19F NMR
+      - 31P NMR
+      - 11B NMR
+      - 29Si NMR
+    planned_project_role: experimental_nmr_transfer
+    limitations:
+      - Large dataset (~3.3 GB total)
+      - Structure-to-spectrum mapping at ~98% skeleton accuracy
+      - Extracted from PDF supporting info (2010-2024)
+      - Solvent/condition metadata completeness varies
+      - MAE: 0.026 ppm (1H), 0.206 ppm (13C)
+    status: available_partial  # Small files downloaded; large files pending
+
+  # ---------------------------------------------------------------------------
+  # F. NIST Chemistry WebBook — Curated experimental spectra
+  # ---------------------------------------------------------------------------
+  - dataset_id: nist_webbook
+    display_name: NIST Chemistry WebBook
+    version_or_access_date: "2026-06-17"
+    source_url: https://webbook.nist.gov/
+    paper_or_citation: "NIST Chemistry WebBook, NIST Standard Reference Database Number 69"
+    doi: "10.18434/T4D303"
+    license_or_access_status: >
+      NIST data is in the public domain for US government works.
+      Individual compound data accessible via web interface.
+      Bulk scraping is prohibited by NIST terms of use and robots.txt.
+      Manual download of individual spectra is permitted for research.
+      Attribution to NIST is required: "Data from NIST Standard Reference
+      Database 69: NIST Chemistry WebBook".
+    local_server_path: /data/home/scwc008/run/xxy/MTO/data/external/experimental_spectra/nist
+    local_fallback_path: null
+    raw_files: []  # Manual curation only
+    checksum_manifest: null
+    file_manifest: null
+    molecule_count: null  # Thousands available, curated subset only
+    elements: null
+    target_types:
+      - experimental_ir_spectrum
+      - experimental_uv_vis_spectrum
+      - experimental_mass_spectrum
+    spectra_types:
+      - IR (gas phase, liquid phase, varying resolution)
+      - UV-Vis
+      - Mass spectra
+      - Thermochemical data
+    planned_project_role: curated_case_studies
+    limitations:
+      - Manual curation only; no bulk download
+      - Phase/condition metadata vary per compound
+      - Resolution and wavenumber range vary
+      - Cannot be used for large-scale training
+    status: manual_curation_only
+
+  # ---------------------------------------------------------------------------
+  # G. SDBS / AIST — Curated experimental spectra
+  # ---------------------------------------------------------------------------
+  - dataset_id: sdbs_aist
+    display_name: SDBS / AIST Spectral Database
+    version_or_access_date: "2026-06-17"
+    source_url: https://sdbs.db.aist.go.jp/
+    paper_or_citation: >
+      "SDBS: Spectral Database for Organic Compounds",
+      National Institute of Advanced Industrial Science and Technology (AIST), Japan
+    doi: null
+    license_or_access_status: >
+      Freely accessible for individual compound lookup via web interface.
+      Terms of use restrict bulk downloading and redistribution.
+      Individual spectra may be downloaded for research purposes only.
+      Attribution to SDBS/AIST is required.
+      Commercial use may require separate permission.
+    local_server_path: /data/home/scwc008/run/xxy/MTO/data/external/experimental_spectra/sdbs
+    local_fallback_path: null
+    raw_files: []  # Manual curation only
+    checksum_manifest: null
+    file_manifest: null
+    molecule_count: null  # ~34,000 compounds, curated subset only
+    elements: null
+    target_types:
+      - experimental_ftir_spectrum
+      - experimental_raman_spectrum
+      - experimental_1h_nmr_spectrum
+      - experimental_13c_nmr_spectrum
+      - experimental_mass_spectrum
+    spectra_types:
+      - FT-IR
+      - Raman
+      - 1H NMR
+      - 13C NMR
+      - Mass spectrometry (MS)
+      - Electron spin resonance (ESR)
+    planned_project_role: curated_case_studies
+    limitations:
+      - Manual curation only; no bulk download
+      - Download limits may apply per session
+      - Measurement conditions vary across compounds
+      - Redistribution restrictions apply
+      - Cannot be used for large-scale training
+    status: manual_curation_only
+
+  # ---------------------------------------------------------------------------
+  # H. Synthetic TMA — Non-chemical tensor assembly probe
+  # ---------------------------------------------------------------------------
+  - dataset_id: synthetic_tma
+    display_name: Synthetic TMA (Tensor Mode Assembly)
+    version_or_access_date: "2026-06-17"
+    source_url: null  # Generated locally
+    paper_or_citation: null  # Generated dataset, no external paper
+    doi: null
+    license_or_access_status: >
+      Generated dataset. No external license restrictions.
+      Script is part of this repository.
+    local_server_path: /data/home/scwc008/run/xxy/MTO/data/external/synthetic_tma
+    local_fallback_path: null
+    raw_files:
+      - smoke/train.pt
+      - smoke/val.pt
+      - smoke/test.pt
+      - smoke/metadata.json
+    checksum_manifest: synthetic_tma/manifests/checksums.csv
+    file_manifest: synthetic_tma/manifests/file_manifest.csv
+    molecule_count: 140  # smoke: 100 train + 20 val + 20 test
+    elements: null  # Synthetic atom types 1-5
+    target_types:
+      - scalar (scalar_total)
+      - vector (dipole_like, l=1)
+      - tensor (quadrupole_like, l=2)
+      - scalar (cancellation_response)
+      - scalar (anisotropy_response)
+    spectra_types: []  # No spectral data
+    planned_project_role: toy_probe
+    limitations:
+      - Not chemical data; purely synthetic
+      - Simple point-charge model
+      - Low-dimensional by design
+      - Only for method verification, not scientific claims
+    status: generated
+
+# =============================================================================
+# Summary counts
+# =============================================================================
+summary:
+  total_datasets: 8
+  available_full: 1    # qm9s
+  available_partial: 2  # qm7x (8000.xz + metadata), nmrexp (small files)
+  pending_download: 2   # qme14s, nmrshiftdb2
+  registered_only: 0
+  manual_curation_only: 2  # nist_webbook, sdbs_aist
+  generated: 1         # synthetic_tma

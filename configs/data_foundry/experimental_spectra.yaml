@@ -1,0 +1,63 @@
+# Experimental Spectra Configuration
+# NIST Chemistry WebBook and SDBS/AIST
+# Curated experimental IR, Raman, UV-Vis, NMR case studies
+# NOT for bulk training. Manual curation only.
+
+datasets:
+
+  - dataset_id: nist_webbook
+    display_name: NIST Chemistry WebBook
+    description: >
+      Curated experimental IR and UV-Vis spectra from the NIST Chemistry WebBook.
+      Used for case-study validation, not bulk training.
+    source:
+      url: https://webbook.nist.gov/
+    access_policy: manual_curation_only
+    access_notes: >
+      NIST data is publicly accessible for individual compounds via the web interface.
+      Bulk scraping is prohibited by NIST's terms of use and robots.txt.
+      Individual spectra may be downloaded manually for specific compounds of interest.
+      Each downloaded spectrum must be attributed to NIST.
+    spectrum_types:
+      - IR (gas phase, liquid phase)
+      - UV-Vis
+      - Mass spectra
+      - Thermochemical data
+    limitations:
+      - No bulk download permitted
+      - Phase/condition metadata must be recorded per spectrum
+      - Different measurement conditions across compounds
+      - Resolution and wavenumber range vary
+    project_role: curated_case_studies
+    status: manual_curation_only
+
+  - dataset_id: sdbs_aist
+    display_name: SDBS / AIST Spectral Database
+    description: >
+      Spectral Database for Organic Compounds (SDBS) hosted by AIST Japan.
+      Contains FT-IR, Raman, 1H NMR, 13C NMR, MS, and ESR spectra.
+    source:
+      url: https://sdbs.db.aist.go.jp/
+    access_policy: manual_curation_only
+    access_notes: >
+      SDBS is freely accessible for individual compound lookups via the web interface.
+      The terms of use restrict bulk downloading and redistribution.
+      Individual spectra may be downloaded for research purposes.
+      Attribution to SDBS/AIST is required.
+    spectrum_types:
+      - FT-IR
+      - Raman
+      - 1H NMR
+      - 13C NMR
+      - Mass spectrometry (MS)
+      - Electron spin resonance (ESR)
+    limitations:
+      - No bulk download permitted
+      - Number of downloads per session may be limited
+      - Spectra are curated but measurement conditions vary
+      - Redistribution restrictions apply
+    project_role: curated_case_studies
+    status: manual_curation_only
+
+server_path: /data/home/scwc008/run/xxy/MTO/data/external/experimental_spectra
+local_fallback: null

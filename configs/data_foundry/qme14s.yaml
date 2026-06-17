@@ -1,0 +1,45 @@
+# QMe14S Dataset Configuration
+# Purpose: broader chemistry transfer, element/functional-group OOD, spectral generalization
+
+dataset_id: qme14s
+display_name: QMe14S
+description: >
+  Quantum Mechanics 14 Elements Spectral dataset. Extends QM9S to 14 elements
+  (H, Li, B, C, N, O, F, Na, Mg, Si, P, S, Cl, Br), 47 functional groups,
+  with dipole moment, polarizability, IR, Raman, and NMR spectra.
+
+source:
+  url: https://figshare.com/s/889262a4e999b5c9a5b3
+  paper: "QMe14S, A Comprehensive and Efficient Spectral Dataset for Small Organic Molecules"
+  doi: "10.1021/acs.jpclett.5c00839"
+  year: 2025
+  journal: Journal of Physical Chemistry Letters
+
+server_path: /data/home/scwc008/run/xxy/MTO/data/external/qme14s
+local_fallback: /mnt/e/Ar-MTO-data-foundry/qme14s
+
+raw_subdirs:
+  raw: raw/
+  checksums: checksums/
+  manifests: manifests/
+
+elements: [H, Li, B, C, N, O, F, Na, Mg, Si, P, S, Cl, Br]
+functional_groups: 47 (see paper)
+
+targets:
+  scalar:
+    - dipole_magnitude
+    - homo, lumo, gap
+  tensor:
+    - polarizability_tensor
+  spectral:
+    - ir_spectrum
+    - raman_spectrum
+    - nmr_shifts (1H, 13C)
+
+project_role: transfer_and_ood
+limitations:
+  - Computed spectra only (DFT)
+  - Single conformer per molecule
+  - NMR computed only, not experimental
+status: pending_download

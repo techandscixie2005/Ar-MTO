@@ -1,0 +1,59 @@
+# QM7-X Dataset Configuration
+# Purpose: conformer/non-equilibrium validation, response-subspace continuity
+
+dataset_id: qm7x
+display_name: QM7-X
+description: >
+  QM7-X: A comprehensive dataset of quantum-mechanical properties spanning
+  the chemical space of small organic molecules with extensive conformational
+  sampling. ~4.2M structures (6950 molecules x ~600 conformers each).
+  Stored as eight HDF5 files.
+
+source:
+  url_primary: https://zenodo.org/records/3905361
+  url_supplementary: https://zenodo.org/records/4288677
+  paper: "QM7-X: A comprehensive dataset of quantum-mechanical properties"
+  doi: "10.1038/s41597-021-00812-2"
+  year: 2021
+  journal: Scientific Data
+
+server_path: /data/home/scwc008/run/xxy/MTO/data/external/qm7x
+local_fallback: /mnt/e/Ar-MTO-data-foundry/qm7x
+
+raw_subdirs:
+  raw: raw/
+  checksums: checksums/
+  manifests: manifests/
+
+num_molecules: 6950
+num_conformers_per_molecule: ~600
+total_structures: ~4200000
+
+expected_files:
+  - README.txt
+  - 1000.hdf5
+  - 2000.hdf5
+  - 3000.hdf5
+  - 4000.hdf5
+  - 5000.hdf5
+  - 6000.hdf5
+  - 7000.hdf5
+
+targets:
+  scalar:
+    - total_energy
+    - homo, lumo, gap
+    - atomization_energy
+  tensor:
+    - polarizability_tensor
+    - dipole_moment
+  conformer:
+    - energies across conformers
+    - property variation across conformers
+
+project_role: conformer_validation
+limitations:
+  - Large total size (~40+ GiB compressed)
+  - Single molecules (no intermolecular interactions)
+  - DFT-level computation only
+status: pending_download

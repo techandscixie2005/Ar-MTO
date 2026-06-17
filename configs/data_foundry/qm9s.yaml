@@ -1,0 +1,64 @@
+# QM9S Dataset Configuration
+# Status: available_full (already on server)
+# Do not modify raw files.
+
+dataset_id: qm9s
+display_name: QM9S
+description: >
+  Quantum Machines 9 Spectral dataset. Extended QM9 with spectral properties
+  (IR, Raman, UV-Vis broadening) and tensor response properties (dipole moment,
+  polarizability). Primary training dataset for MTO-Net.
+
+source:
+  url: https://figshare.com/s/889262a4e999b5c9a5b3  # QM9S Figshare
+  paper: "QM9S: A Comprehensive Spectral Dataset for Small Organic Molecules"
+  doi: null  # Fill when available
+  citation: "QM9S dataset via Figshare, original paper TBD"
+
+server_path: /data/home/scwc008/run/xxy/MTO/data/qm9s
+local_fallback: null
+
+raw_files:
+  - qm9s.pt                           # 2.68 GiB, PyTorch serialized dataset
+  - qm9s_csv.zip                      # 3.46 GiB, CSV export of full dataset
+  - ir_boraden.csv                    # 8.13 GiB, IR broadened spectra
+  - raman_boraden.csv                 # 8.18 GiB, Raman broadened spectra
+  - uv_boraden.csv                    # 1.43 GiB, UV-Vis broadened spectra
+  - ext_val.zip                       # 133 MiB, external validation set
+  - ext_val_env.zip                   # 134 MiB, external validation environments
+  - readme.txt                        # Original QM9S readme
+  - atomic_energy_reference.txt       # Atomic energy reference values
+  - FIGSHARE_ALL_FILES_MANIFEST.json   # Manifest from Figshare
+  - figshare_article_24235333.json     # Figshare article metadata
+  - subset_smoke/                     # Smoke test subset
+  - subset_medium/                    # Medium development subset
+
+molecule_count: ~134k (exact count to be audited)
+elements: [H, C, N, O, F]  # QM9 subset
+
+targets:
+  scalar:
+    - mu (dipole magnitude)
+    - gap (HOMO-LUMO gap)
+    - homo, lumo
+    - zpve (zero-point vibrational energy)
+    - U0, U, H, G (internal energy, enthalpy, free energy)
+    - Cv (heat capacity)
+  tensor:
+    - alpha (polarizability tensor, 3x3)
+  spectral:
+    - ir (IR spectrum)
+    - raman (Raman spectrum)
+    - uv_vis (UV-Vis spectrum)
+
+splits:
+  - subset_smoke (16/32/128 molecules)
+  - subset_medium
+  - train/val/test splits (to be created)
+
+project_role: primary_training
+limitations:
+  - Limited to QM9 chemical space (H, C, N, O, F only, <=9 heavy atoms)
+  - Computed spectra only (DFT), no experimental validation
+  - Single conformer per molecule (equilibrium geometry)
+status: available_full

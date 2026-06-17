@@ -59,3 +59,56 @@ runs/
 
 # OMC
 .omc/logs/
+
+# Raw data archives
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.tar.xz
+*.txz
+*.tar.bz2
+*.tbz2
+*.7z
+*.rar
+
+# HDF5 data files
+*.hdf5
+*.h5
+*.hdf
+
+# Chemical structure files (raw data)
+*.sdf
+*.sd
+*.mol
+*.mol2
+
+# Spectra data files (raw)
+*.jdx
+*.dx
+*.spc
+*.spa
+
+# Large CSV data dumps (but allow small metadata CSVs)
+*_boraden.csv
+*_full.csv
+*_data.csv
+*_raw.csv
+
+# Large JSON data dumps (but allow manifests)
+*_FULL_DATA*.json
+*_full_data*.json
+
+# Parquet data files (raw)
+*.parquet
+
+# Stray downloads in repo root
+/NMRexp_*/
+/README.txt
+/createDB.py
+
+# External data root (absolute path pattern)
+data/external/
+
+# Local fallback data staging
+/mnt/e/Ar-MTO-data-foundry/

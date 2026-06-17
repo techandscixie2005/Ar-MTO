@@ -1,0 +1,47 @@
+dataset_id,target_name,target_type,shape,units,level_of_theory,experimental_or_computed,planned_use,notes
+qm9s,mu,dipole_magnitude,scalar,Debye,DFT (B3LYP/6-31G*),computed,primary_scalar_target,dipole moment magnitude
+qm9s,alpha,polarizability_tensor,tensor_3x3,Bohr^3,DFT (B3LYP/6-31G*),computed,primary_tensor_target,static polarizability tensor
+qm9s,homo,homo_energy,scalar,eV,DFT (B3LYP/6-31G*),computed,auxiliary_scalar,Highest occupied molecular orbital
+qm9s,lumo,lumo_energy,scalar,eV,DFT (B3LYP/6-31G*),computed,auxiliary_scalar,Lowest unoccupied molecular orbital
+qm9s,gap,hl_gap,scalar,eV,DFT (B3LYP/6-31G*),computed,auxiliary_scalar,HOMO-LUMO gap
+qm9s,zpve,zpve,scalar,eV,DFT (B3LYP/6-31G*),computed,auxiliary_scalar,Zero-point vibrational energy
+qm9s,U0,internal_energy_0K,scalar,eV,DFT (B3LYP/6-31G*),computed,auxiliary_scalar,Internal energy at 0K
+qm9s,U,internal_energy,scalar,eV,DFT (B3LYP/6-31G*),computed,auxiliary_scalar,Internal energy at 298.15K
+qm9s,H,enthalpy,scalar,eV,DFT (B3LYP/6-31G*),computed,auxiliary_scalar,Enthalpy at 298.15K
+qm9s,G,free_energy,scalar,eV,DFT (B3LYP/6-31G*),computed,auxiliary_scalar,Free energy at 298.15K
+qm9s,Cv,heat_capacity,scalar,cal/(mol K),DFT (B3LYP/6-31G*),computed,auxiliary_scalar,Heat capacity at 298.15K
+qm9s,ir,ir_spectrum,spectral_1d,arbitrary,DFT (B3LYP/6-31G*),computed,primary_spectral_target,IR spectrum with broadening
+qm9s,raman,raman_spectrum,spectral_1d,arbitrary,DFT (B3LYP/6-31G*),computed,primary_spectral_target,Raman spectrum with broadening
+qm9s,uv_vis,uv_vis_spectrum,spectral_1d,arbitrary,TD-DFT,computed,primary_spectral_target,UV-Vis spectrum with broadening
+qme14s,mu,dipole_magnitude,scalar,Debye,DFT,computed,transfer_target,,
+qme14s,alpha,polarizability_tensor,tensor_3x3,Bohr^3,DFT,computed,transfer_target,,
+qme14s,homo,homo_energy,scalar,eV,DFT,computed,transfer_auxiliary,,
+qme14s,lumo,lumo_energy,scalar,eV,DFT,computed,transfer_auxiliary,,
+qme14s,gap,hl_gap,scalar,eV,DFT,computed,transfer_auxiliary,,
+qme14s,ir,ir_spectrum,spectral_1d,arbitrary,DFT,computed,transfer_spectral,,
+qme14s,raman,raman_spectrum,spectral_1d,arbitrary,DFT,computed,transfer_spectral,,
+qme14s,nmr_1h,nmr_shifts,spectral_1d,ppm,DFT,computed,transfer_spectral,1H NMR computed shifts
+qme14s,nmr_13c,nmr_shifts,spectral_1d,ppm,DFT,computed,transfer_spectral,13C NMR computed shifts
+qm7x,total_energy,total_energy,scalar,eV,PBE0+MBD,computed,conformer_target,Total energy per conformer
+qm7x,homo,homo_energy,scalar,eV,PBE0+MBD,computed,conformer_auxiliary,,
+qm7x,lumo,lumo_energy,scalar,eV,PBE0+MBD,computed,conformer_auxiliary,,
+qm7x,gap,hl_gap,scalar,eV,PBE0+MBD,computed,conformer_auxiliary,,
+qm7x,atomization_energy,atomization_energy,scalar,eV,PBE0+MBD,computed,conformer_target,,
+qm7x,alpha,polarizability_tensor,tensor_3x3,Bohr^3,PBE0+MBD,computed,conformer_tensor,,
+qm7x,dipole,dipole_moment,vector_3,Bohr*e,PBE0+MBD,computed,conformer_vector,,
+nmrshiftdb2,1h_shifts,chemical_shifts,set,ppm,experimental,experimental,nmr_reference,Assigned 1H chemical shifts
+nmrshiftdb2,13c_shifts,chemical_shifts,set,ppm,experimental,experimental,nmr_reference,Assigned 13C chemical shifts
+nmrshiftdb2,1h_spectrum,raw_spectrum,spectral_1d,arbitrary,experimental,experimental,nmr_reference,Raw FID or processed spectrum (limited)
+nmrexp,1h_spectrum,raw_spectrum,spectral_1d,arbitrary,experimental,experimental,nmr_transfer,1H NMR spectra
+nmrexp,13c_spectrum,raw_spectrum,spectral_1d,arbitrary,experimental,experimental,nmr_transfer,13C NMR spectra
+nist_webbook,ir,ir_spectrum,spectral_1d,transmittance/absorbance,experimental,experimental,curated_case,Variable phase and conditions
+nist_webbook,uv_vis,uv_vis_spectrum,spectral_1d,absorbance,experimental,experimental,curated_case,Variable solvent and conditions
+sdbs_aist,ftir,ir_spectrum,spectral_1d,transmittance/absorbance,experimental,experimental,curated_case,FT-IR spectra
+sdbs_aist,raman,raman_spectrum,spectral_1d,arbitrary,experimental,experimental,curated_case,Raman spectra
+sdbs_aist,1h_nmr,nmr_spectrum,spectral_1d,ppm,experimental,experimental,curated_case,1H NMR spectra
+sdbs_aist,13c_nmr,nmr_spectrum,spectral_1d,ppm,experimental,experimental,curated_case,13C NMR spectra
+synthetic_tma,scalar_total,scalar,scalar,arbitrary,synthetic,generated,toy_probe,Scalar sum of charges
+synthetic_tma,vector_dipole,dipole_like,vector_3,arbitrary,synthetic,generated,toy_probe,Vector dipole-like response (l=1)
+synthetic_tma,rank2_quadrupole,quadrupole_like,tensor_3x3,arbitrary,synthetic,generated,toy_probe,Traceless symmetric rank-2 (l=2)
+synthetic_tma,cancellation_response,cancellation,scalar,arbitrary,synthetic,generated,toy_probe,Nonlinear cancellation signal
+synthetic_tma,anisotropy_response,anisotropy,scalar,arbitrary,synthetic,generated,toy_probe,Fraction in anisotropic components

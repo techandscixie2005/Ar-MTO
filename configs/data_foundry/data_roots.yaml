@@ -1,0 +1,30 @@
+# Data Roots Configuration
+# Defines all storage paths for MTO-Net datasets.
+# Server paths are authoritative; local fallback paths are for staging only.
+
+server:
+  hpc_alias: bjhpc_xxy_1
+  workspace_root: /data/home/scwc008/run/xxy
+  project_root: /data/home/scwc008/run/xxy/MTO
+  data_root: /data/home/scwc008/run/xxy/MTO/data
+  external_root: /data/home/scwc008/run/xxy/MTO/data/external
+
+  datasets:
+    qm9s: /data/home/scwc008/run/xxy/MTO/data/qm9s
+    qme14s: /data/home/scwc008/run/xxy/MTO/data/external/qme14s
+    qm7x: /data/home/scwc008/run/xxy/MTO/data/external/qm7x
+    nmrshiftdb2: /data/home/scwc008/run/xxy/MTO/data/external/nmrshiftdb2
+    nmrexp: /data/home/scwc008/run/xxy/MTO/data/external/nmrexp
+    experimental_spectra: /data/home/scwc008/run/xxy/MTO/data/external/experimental_spectra
+    synthetic_tma: /data/home/scwc008/run/xxy/MTO/data/external/synthetic_tma
+
+local:
+  fallback_root: /mnt/e/Ar-MTO-data-foundry
+  staging_logs: /mnt/e/Ar-MTO-data-foundry/staging_logs
+
+git:
+  worktree: /home/xiangyu_xie/Ar-MTO-worktrees/wt-06-data-foundry
+  registry_dir: data_registry
+  scripts_dir: scripts/data_foundry
+  configs_dir: configs/data_foundry
+  outputs_dir: outputs/audit/data_foundry

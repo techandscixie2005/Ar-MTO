@@ -1,0 +1,43 @@
+# NMRexp Dataset Configuration
+# Purpose: large-scale experimental NMR records for real-world transfer
+
+dataset_id: nmrexp
+display_name: NMRexp
+description: >
+  A database of 3.3 million experimental NMR spectra.
+  Large-scale real-world NMR records for transfer learning and case studies.
+
+source:
+  url_expected: https://zenodo.org/  # Exact Zenodo record TBD
+  paper: "A database of 3.3 million experimental NMR spectra"
+  doi: null  # Fill when found
+  year: null
+  journal: Scientific Data (expected)
+
+server_path: /data/home/scwc008/run/xxy/MTO/data/external/nmrexp
+local_fallback: /mnt/e/Ar-MTO-data-foundry/nmrexp
+
+raw_subdirs:
+  raw: raw/
+  checksums: checksums/
+  manifests: manifests/
+
+nuclei:
+  - 1H (expected primary)
+  - 13C (expected primary)
+  - others TBD
+
+spectrum_types:
+  - 1D spectra
+  - peak lists
+  - possibly 2D spectra
+
+record_count_claimed: 3300000
+
+project_role: experimental_nmr_transfer
+limitations:
+  - Exact structure-to-spectrum mapping quality TBD
+  - May be too large for full download; sample/index first
+  - Solvent/condition metadata completeness varies
+  - Dataset not yet located at time of registry creation
+status: registered_only

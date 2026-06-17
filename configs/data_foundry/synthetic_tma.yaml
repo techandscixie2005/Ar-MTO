@@ -1,0 +1,56 @@
+# Synthetic TMA Dataset Configuration
+# Non-chemical Tensor Mode Assembly experiment
+# Proves local-to-global tensor assembly is broader than chemistry.
+
+dataset_id: synthetic_tma
+display_name: Synthetic TMA (Tensor Mode Assembly)
+description: >
+  Synthetic SO(3)-structured local-to-global multipole dataset.
+  Generates 3D point clouds with scalar charges, assembles them into
+  multipole-like tensor targets (scalar total, vector dipole-like,
+  rank-2 quadrupole-like, cancellation response, anisotropy response).
+  Used to verify MTO works on non-chemical tensor assembly problems.
+
+source:
+  generated_by: scripts/data_foundry/generate_synthetic_tma.py
+  is_synthetic: true
+
+server_path: /data/home/scwc008/run/xxy/MTO/data/external/synthetic_tma
+local_fallback: null
+
+smoke_subdirs:
+  smoke: smoke/
+  generated: generated/
+  manifests: manifests/
+
+smoke_config:
+  num_train: 100
+  num_val: 20
+  num_test: 20
+  min_atoms: 3
+  max_atoms: 12
+  noise_std: 0.01
+
+input_features:
+  - positions (x, y, z) in 3D
+  - scalar_charge (scalar per atom)
+  - atom_type (categorical, 1..5)
+
+targets:
+  - scalar_total: total charge/scalar sum, invariant
+  - vector_dipole: dipole-like vector response, equivariant (l=1)
+  - rank2_quadrupole: quadrupole-like tensor (l=2), traceless symmetric
+  - cancellation_response: non-additive nonlinear cancellation signal
+  - anisotropy_response: fraction of response in anisotropic components
+
+equivariance_checks:
+  - translation_invariance: scalar_total, cancellation_response
+  - rotation_equivariance: vector_dipole (l=1), rank2_quadrupole (l=2)
+  - permutation_invariance: all targets
+
+project_role: toy_probe
+limitations:
+  - Not chemical data; purely synthetic for method verification
+  - Simple point-charge model, no quantum effects
+  - Low-dimensional by design
+status: generated
