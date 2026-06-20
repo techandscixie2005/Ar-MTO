@@ -70,7 +70,7 @@ Tests are comprehensive but have gaps:
 | 1.3 | Add test_permutation.py: same-element atom permutation consistency | `pytest tests/test_permutation.py -v` passes | 1.2b | cc:完了 [a7b579b] |
 | 1.4 | Create scripts/verify_mto_core.sh running all mandatory tests | `bash scripts/verify_mto_core.sh` exits 0 locally | 1.1, 1.2, 1.2b, 1.3 | cc:完了 [0515b12] |
 | 1.5 | Run existing test suite, fix any regressions | All 6 existing test files pass | 1.2b | cc:完了 [3dfc37e] |
-| 1.6 | **BLOCKER** N16R4 server rules hardening: probe server, update global & project CLAUDE.md with verified module/env rules, create scripts/hpc_env.sh + scripts/probe_hpc_env.sh, forbid `/tmp` and hard-coded modules | Remote probe passes; `~/.claude/CLAUDE.md` updated with N16R4 rules; project `CLAUDE.md` updated; `scripts/hpc_env.sh` prints env and imports torch; `scripts/probe_hpc_env.sh` discovers modules safely; `outputs/reports/n16r4_server_rules_report.md` written; Phase 2 remains blocked until review | 1.5 | cc:WIP |
+| 1.6 | **BLOCKER** N16R4 server rules hardening: probe server, update global & project CLAUDE.md with verified module/env rules, create scripts/hpc_env.sh + scripts/probe_hpc_env.sh, forbid `/tmp` and hard-coded modules | Remote probe passes; `~/.claude/CLAUDE.md` updated with N16R4 rules; project `CLAUDE.md` updated; `scripts/hpc_env.sh` prints env and imports torch; `scripts/probe_hpc_env.sh` discovers modules safely; `outputs/reports/n16r4_server_rules_report.md` written; Phase 2 remains blocked until review | 1.5 | cc:完了 [31f70de] |
 
 ---
 
