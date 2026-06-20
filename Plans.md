@@ -87,11 +87,45 @@ Tests are comprehensive but have gaps:
 
 ---
 
+## Phase 2.7: DetaNet/PyG Compatibility Gate
+
+team_validation_mode: not_required_lightweight
+team_validation_note: >
+  Single diagnostic task with well-specified checks and deliverables. No product behavior change.
+  All Product/Architecture/Security perspectives are covered by the user's detailed requirements list.
+
+spec_delta: none
+spec_skip_reason: >
+  Diagnostic compatibility gate — no product behavior, API, data model, or user-visible behavior change.
+  CLAUDE.md already defines the DetaNet/PyG dependency path and the N16R4 operating rules.
+
+| Task | 内容 | DoD | Depends | Status |
+|------|------|-----|---------|--------|
+| 2.7 | **DetaNet/PyG compatibility gate**: (1) probe login-node env versions (2) Slurm GPU-job runs one-batch fwd/bwd through full MTO mu pipeline including DetaNet import (3) if segfault persists, diagnose and propose precise fix with env plan, no blind pip install | `outputs/reports/detanet_pyg_compat_report.md` with clear recommendation (proceed/fix/rebuild); `scripts/check_detanet_pyg_compat.py` and `scripts/run_check_detanet_pyg_compat.sh` committed; Plans.md updated with outcome | 2.6 | cc:完了 |
+
+**Acceptance criteria:**
+- A short Slurm GPU job proves the real `train_mu.py` dependency path can run one batch forward/backward without segfault; OR
+- Phase 3 remains blocked with a precise PyG/DetaNet environment fix plan.
+
+**Diagnosis path (if segfault):**
+- a) Install a PyG wheel matching torch 2.11.0+cu130 if officially available
+- b) Create a separate clean conda env for MTO with matched torch/PyG
+- c) Remove PyG dependency from the DetaNet import path (e.g., monkey-patch DetaNet's `radius_graph` with `detanet_bridge.compute_radius_edges` before import)
+- d) Fall back to CPU/local DetaNet tests while keeping GPU smoke based on train_mu.py
+
+**Key insight from dependency analysis:**
+- `third_party/DetaNet/detanet_model/detanet.py:5` does `from torch_geometric.nn import radius_graph` at the **top level**
+- Just `import DetaNet` triggers PyG C++ extension load → segfault on incompatible CUDA stacks
+- `detanet_bridge.compute_radius_edges` is a pure-PyTorch fallback but currently unused because the import crashes first
+- `train_mu.py` itself has no direct PyG imports — only DetaNet pulls it in
+
+---
+
 ## Phase 3: Smoke Training (Staged)
 
 | Task | 内容 | DoD | Depends | Status |
 |------|------|-----|---------|--------|
-| 3.1 | Smoke 1: 64 molecules, 2 epochs | No NaN/inf, finite loss, checkpoint saves & reloads | Phase 2 | cc:TODO |
+| 3.1 | Smoke 1: 64 molecules, 2 epochs | No NaN/inf, finite loss, checkpoint saves & reloads | Phase 2, 2.7 | cc:TODO |
 | 3.2 | Smoke 2: 500 molecules, 5 epochs | No NaN/inf, loss decreases, metrics produced | 3.1 | cc:TODO |
 | 3.3 | Smoke 3: 5000 molecules, 10 epochs | No NaN/inf, validation metrics reasonable | 3.2 | cc:TODO |
 | 3.4 | Full QM9S, seed=0 | Complete run with all outputs saved | 3.3 | cc:TODO |
