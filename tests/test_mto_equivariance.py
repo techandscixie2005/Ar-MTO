@@ -272,11 +272,13 @@ class TestMTOBatchIsolation:
             coeffs_ba = router(h_ba, batch=batch_ba)
             O_ba = mto(h_ba, coeffs_ba, batch=batch_ba)
 
-        # Mol A output (batch idx 0 in ab, batch idx 0 in ba but it's mol B there)
+        # Output index is determined by batch value, not atom position.
+        # In AB ordering: batch=[0,0,0,0,0, 1,1,1,1] → O_ab[0]=A, O_ab[1]=B
+        # In BA ordering: batch=[1,1,1,1, 0,0,0,0,0] → O_ba[0]=A, O_ba[1]=B
         for l in [0, 1, 2, 3]:
-            assert torch.allclose(O_ab[l][0:1], O_ba[l][1:2], atol=1e-5), \
+            assert torch.allclose(O_ab[l][0:1], O_ba[l][0:1], atol=1e-5), \
                 f"Molecule A mismatch under reordering for l={l}"
-            assert torch.allclose(O_ab[l][1:2], O_ba[l][0:1], atol=1e-5), \
+            assert torch.allclose(O_ab[l][1:2], O_ba[l][1:2], atol=1e-5), \
                 f"Molecule B mismatch under reordering for l={l}"
 
 
@@ -370,8 +372,10 @@ class TestMTOModeMasking:
         z = torch.tensor([8, 1, 1], dtype=torch.long)
         mode_mask, ks = compute_valence_adaptive_k(z, max_modes=8)
         assert ks[0].item() == 4
-        assert mode_mask.shape == (1, 4)
-        assert mode_mask[0].all()
+        # Mask is always padded to max_modes for pipeline compatibility
+        assert mode_mask.shape == (1, 8)
+        assert mode_mask[0, :4].all()
+        assert not mode_mask[0, 4:].any()
 
         # Methane: C (Z=6, 4v) + 4*H (Z=1, 1v each) = 8 valence electrons → K=4
         z = torch.tensor([6, 1, 1, 1, 1], dtype=torch.long)
