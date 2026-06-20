@@ -15,6 +15,9 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# Ensure Python can find ar_mto and detanet_model
+export PYTHONPATH="${PWD}/src:${PWD}/third_party/DetaNet:${PYTHONPATH:-}"
+
 VERBOSE=""
 QUICK=""
 

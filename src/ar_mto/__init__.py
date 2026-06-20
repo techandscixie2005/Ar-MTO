@@ -7,6 +7,10 @@ The central research question:
 
 __version__ = "0.2.0"
 
+import torch
+
+torch.serialization.add_safe_globals([slice])
+
 from ar_mto.tensor_adapter import TensorAdapter, make_adapter
 from ar_mto.signed_routing import SignedRouter
 from ar_mto.mto_core import (

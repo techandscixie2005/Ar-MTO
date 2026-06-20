@@ -1,0 +1,37 @@
+# MTO-Net dipole moment training configuration.
+# This config is the training-level counterpart to model/mto_full.yaml.
+#
+# Model architecture settings are in configs/model/mto_full.yaml.
+# This file holds training hyperparameters.
+
+# Dataset
+dataset: "data/qm9s/qm9s.pt"
+splits: "data/qm9s/splits/full/splits.json"
+
+# Training
+epochs: 200
+batch_size: 64
+lr: 5.0e-4
+weight_decay: 0.0
+grad_clip: 1.0
+seed: 0
+
+# Optimizer
+optimizer: "Adam_amsgrad"
+scheduler: "ReduceLROnPlateau"
+scheduler_factor: 0.5
+scheduler_patience: 20
+
+# Checkpointing
+val_every: 1
+save_every: 10
+
+# Target
+target: "dipole"
+loss: "mse"
+readout: "vector"
+
+# Smoke overrides (use with --dataset override)
+smoke:
+  epochs: 5
+  batch_size: 32
