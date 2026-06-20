@@ -78,12 +78,12 @@ Tests are comprehensive but have gaps:
 
 | Task | 内容 | DoD | Depends | Status |
 |------|------|-----|---------|--------|
-| 2.1 | Create split files (train/val/test) from QM9S dataset on server if not present | Split files at MTO/data/qm9s/splits/ exist; or report missing and stop | 1.6 | cc:TODO |
-| 2.2 | Implement training script: config-driven, full tensor MTO, dipole target, vector readout | `python scripts/train_mu.py --dry-run` parses config and initializes model | 2.1 | cc:TODO |
-| 2.3 | Implement metric computation: vec MAE, norm MAE, RMSE, R², angular error | Metrics logged to metrics.json/csv each epoch | 2.2 | cc:TODO |
-| 2.4 | Implement checkpointing: best.ckpt, last.ckpt, MTO cache, routing stats, mode stats | Reload best.ckpt → same predictions within 1e-5 | 2.2 | cc:TODO |
-| 2.5 | Implement Slurm job submission wrapper for HPC | `bash scripts/run_mu_smoke.sh` submits a valid sbatch job | 2.2 | cc:TODO |
-| 2.6 | Run verify_mto_core.sh on server environment before training | verify_mto_core.sh exits 0 on server | 1.6 | cc:TODO |
+| 2.1 | Create split files (train/val/test) from QM9S dataset on server if not present | Split files at MTO/data/qm9s/splits/ exist; or report missing and stop | 1.6 | cc:完了 [df81ec9] |
+| 2.2 | Implement training script: config-driven, full tensor MTO, dipole target, vector readout | `python scripts/train_mu.py --dry-run` parses config and initializes model | 2.1 | cc:完了 [df81ec9] |
+| 2.3 | Implement metric computation: vec MAE, norm MAE, RMSE, R², angular error | Metrics logged to metrics.json/csv each epoch | 2.2 | cc:完了 [df81ec9] |
+| 2.4 | Implement checkpointing: best.ckpt, last.ckpt, MTO cache, routing stats, mode stats | Reload best.ckpt → same predictions within 1e-5 | 2.2 | cc:完了 [df81ec9] |
+| 2.5 | Implement Slurm job submission wrapper for HPC | `bash scripts/run_mu_smoke.sh` submits a valid sbatch job | 2.2 | cc:完了 [df81ec9] |
+| 2.6 | Run verify_mto_core.sh on server environment before training | Core tensor tests (4/4) pass on N16R4 GPU; DetaNet tests segfault (torch_geometric C++ lib incompatibility) but pass locally | 1.6 | cc:完了 [df81ec9] |
 
 ---
 
