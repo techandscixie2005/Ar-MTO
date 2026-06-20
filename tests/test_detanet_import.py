@@ -5,7 +5,7 @@ import pytest
 
 def test_import_ar_mto():
     import ar_mto
-    assert ar_mto.__version__ == "0.1.0"
+    assert ar_mto.__version__ == "0.2.0"
 
 
 def test_locate_detanet():

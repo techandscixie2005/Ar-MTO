@@ -20,7 +20,8 @@ from ar_mto.signed_routing import SignedRouter
 from ar_mto.mto_core import MTOModeAssembly, ScalarOnlyMTO
 from ar_mto.cg_coupling import CGCouplingMinimal
 from ar_mto.tensor_gate import TensorGate, NoGate
-from ar_mto.readouts import ScalarReadout
+from ar_mto.readouts import ScalarReadout, VectorReadout, Rank2TensorReadout, SpectralReadout
+from ar_mto.mto_net import MTOConfig, MTONet, make_mto_net
 
 
 def _make_molecule(num_atoms=5, seed=42):
@@ -43,7 +44,7 @@ class TestMTOForwardBackward:
         return make_latent_detanet(num_block=2, device="cpu")
 
     def test_full_pipeline_forward(self, detanet_model):
-        """End-to-end forward pass: DetaNet → adapter → routing → MTO → readout."""
+        """End-to-end forward: DetaNet → adapter → routing → MTO → CG → gate → readouts."""
         z, pos = _make_molecule(5)
         with torch.no_grad():
             S, T = run_latent_forward(detanet_model, z=z, pos=pos)
@@ -56,11 +57,11 @@ class TestMTOForwardBackward:
 
         mto = MTOModeAssembly(num_features=128, mode_channels=64,
                               num_modes=8, maxl=3)
-        O = mto(h, coeffs)
+        O = mto(h, coeffs)  # [1, K, C, 2l+1]
 
         cg = CGCouplingMinimal(mode_channels=64)
         O_coupled = cg(O)
-        # Merge: CG coupling handles l=0,1,2; keep original l=3
+        # Merge: CG handles l=0,1,2; keep original l=3
         O_full = {0: O_coupled[0], 1: O_coupled[1], 2: O_coupled[2], 3: O[3]}
 
         gate = TensorGate(mode_channels=64, num_modes=8, maxl=3)
@@ -69,15 +70,13 @@ class TestMTOForwardBackward:
         scalar_readout = ScalarReadout(mode_channels=64, num_modes=8)
         y = scalar_readout(O_full)
 
-        # Check shapes
-        assert y.numel() == 1, f"Scalar output has wrong shape: {y.shape}"
-
-        # Check no NaN/Inf
-        for l in [0, 1, 2, 3]:
-            assert not torch.isnan(O_full[l]).any(), f"NaN in O[{l}]"
-            assert not torch.isinf(O_full[l]).any(), f"Inf in O[{l}]"
+        assert y.shape == (1, 1), f"Scalar output shape: {y.shape}"
         assert not torch.isnan(y).any()
         assert not torch.isinf(y).any()
+
+        for key, val in O_full.items():
+            assert not torch.isnan(val).any(), f"NaN in O[{key}]"
+            assert not torch.isinf(val).any(), f"Inf in O[{key}]"
 
     def test_full_pipeline_backward(self, detanet_model):
         """Gradients flow through the entire pipeline."""
@@ -85,7 +84,6 @@ class TestMTOForwardBackward:
         z = z.clone()
         pos = pos.clone().requires_grad_(False)
 
-        # Make all MTO params trainable
         adapter = make_adapter()
         router = SignedRouter(num_features=128, num_modes=4, maxl=3)
         mto = MTOModeAssembly(num_features=128, mode_channels=32,
@@ -93,14 +91,12 @@ class TestMTOForwardBackward:
         gate = TensorGate(mode_channels=32, num_modes=4, maxl=3)
         readout = ScalarReadout(mode_channels=32, num_modes=4)
 
-        # Track gradient flow through MTO params
         mto_params = list(mto.parameters())
         gate_params = list(gate.parameters())
         router_params = list(router.parameters())
 
         S, T = run_latent_forward(detanet_model, z=z, pos=pos)
 
-        # Detach S,T from DetaNet (we're testing MTO grad flow specifically)
         S = S.detach().requires_grad_(True)
         T = T.detach().requires_grad_(True)
 
@@ -113,7 +109,6 @@ class TestMTOForwardBackward:
         loss = y.sum()
         loss.backward()
 
-        # Check gradients exist and are finite
         for name, params in [("MTO", mto_params), ("Gate", gate_params),
                               ("Router", router_params)]:
             for p in params:
@@ -121,7 +116,6 @@ class TestMTOForwardBackward:
                     assert not torch.isnan(p.grad).any(), f"NaN grad in {name}"
                     assert not torch.isinf(p.grad).any(), f"Inf grad in {name}"
 
-        # Input gradients should exist
         assert S.grad is not None
         assert T.grad is not None
         assert not torch.isnan(S.grad).any()
@@ -226,7 +220,7 @@ class TestScalarOnlyAblation:
         readout = ScalarReadout(mode_channels=64, num_modes=8)
         y = readout(O)
 
-        assert y.numel() == 1
+        assert y.shape == (1, 1)
         assert not torch.isnan(y).any()
         assert list(O.keys()) == [0]
 
@@ -332,3 +326,222 @@ class TestConfigVariants:
         y = readout(O)
 
         assert not torch.isnan(y).any()
+
+
+class TestFullMTONet:
+    """End-to-end tests using the MTONet wrapper."""
+
+    @pytest.fixture(scope="class")
+    def detanet_model(self):
+        return make_latent_detanet(num_block=2, device="cpu")
+
+    def test_make_mto_net_full(self, detanet_model):
+        """Full MTONet forward with all readout heads."""
+        model = make_mto_net(
+            detanet_model=detanet_model,
+            num_features=128,
+            num_modes=8,
+            mode_channels=64,
+            maxl=3,
+            active_heads=["scalar", "vector", "rank2", "spectral"],
+            spectral_bins=100,
+        )
+
+        z, pos = _make_molecule(5)
+        with torch.no_grad():
+            result = model(z=z, pos=pos)
+
+        assert result["scalar"].shape == (1, 1)
+        assert result["vector"].shape == (1, 1, 3)
+        assert result["tensor"].shape == (1, 1, 3, 3)
+        assert result["spectrum"].shape == (1, 100)
+
+        for v in result.values():
+            if isinstance(v, torch.Tensor):
+                assert not torch.isnan(v).any()
+
+    def test_make_mto_net_vector_head(self, detanet_model):
+        """MTONet with only vector head."""
+        model = make_mto_net(
+            detanet_model=detanet_model,
+            num_features=128, num_modes=4, mode_channels=32, maxl=3,
+            active_heads=["vector"],
+        )
+        z, pos = _make_molecule(5)
+        with torch.no_grad():
+            result = model(z=z, pos=pos)
+        assert result["vector"].shape == (1, 1, 3)
+        assert "scalar" not in result
+        assert "tensor" not in result
+        assert "spectrum" not in result
+
+    def test_make_mto_net_dim_selection(self):
+        """MTONet respects active_heads configuration."""
+        model = make_mto_net(
+            num_features=128, num_modes=4, mode_channels=32, maxl=3,
+            active_heads=["scalar", "rank2"],
+        )
+        z, pos = _make_molecule(3)
+        with torch.no_grad():
+            result = model(z=z, pos=pos)
+        assert "scalar" in result
+        assert "tensor" in result
+        assert "vector" not in result
+        assert "spectrum" not in result
+
+    def test_forward_with_diagnostics(self, detanet_model):
+        """MTONet returns diagnostics on request."""
+        model = make_mto_net(
+            detanet_model=detanet_model,
+            num_features=128, num_modes=4, mode_channels=32, maxl=3,
+            active_heads=["scalar"],
+        )
+        z, pos = _make_molecule(5)
+        with torch.no_grad():
+            result = model(z=z, pos=pos, return_diagnostics=True)
+        diag = result["diagnostics"]
+        assert "route_stats" in diag
+        assert "gate_stats" in diag
+        assert "gate_l0_mean" in diag["gate_stats"]
+
+    def test_forward_return_modes(self, detanet_model):
+        """MTONet can return assembled modes."""
+        model = make_mto_net(
+            detanet_model=detanet_model,
+            num_features=128, num_modes=4, mode_channels=32, maxl=3,
+            active_heads=["scalar"],
+        )
+        z, pos = _make_molecule(5)
+        with torch.no_grad():
+            result = model(z=z, pos=pos, return_modes=True)
+        assert "modes" in result
+        O = result["modes"]
+        for l in [0, 1, 2, 3]:
+            assert l in O, f"Missing l={l} in returned modes"
+            assert O[l].shape[0] == 1, f"Batch dim mismatch for l={l}"
+
+    def test_valence_adaptive_k_forward(self, detanet_model):
+        """MTONet forward_with_adaptive_k produces valid outputs."""
+        model = make_mto_net(
+            detanet_model=detanet_model,
+            num_features=128, num_modes=16, mode_channels=32, maxl=3,
+            k_policy="valence_adaptive",
+            active_heads=["scalar"],
+        )
+        z, pos = _make_molecule(5)
+        with torch.no_grad():
+            result = model.forward_with_adaptive_k(z=z, pos=pos)
+        assert result["scalar"].shape[0] == 1
+
+    def test_batch_forward(self, detanet_model):
+        """MTONet handles batched molecules."""
+        model = make_mto_net(
+            detanet_model=detanet_model,
+            num_features=128, num_modes=8, mode_channels=32, maxl=3,
+            active_heads=["scalar", "vector", "rank2", "spectral"],
+            spectral_bins=100,
+        )
+        z1, pos1 = _make_molecule(5, seed=10)
+        z2, pos2 = _make_molecule(4, seed=20)
+
+        z = torch.cat([z1, z2])
+        pos = torch.cat([pos1, pos2])
+        batch = torch.tensor([0] * 5 + [1] * 4, dtype=torch.long)
+
+        with torch.no_grad():
+            result = model(z=z, pos=pos, batch=batch)
+
+        assert result["scalar"].shape == (2, 1)
+        assert result["vector"].shape == (2, 1, 3)
+        assert result["tensor"].shape == (2, 1, 3, 3)
+        assert result["spectrum"].shape == (2, 100)
+
+    def test_batch_isolation(self, detanet_model):
+        """Molecule A alone vs in batch must give same predictions."""
+        model = make_mto_net(
+            detanet_model=detanet_model,
+            num_features=128, num_modes=8, mode_channels=32, maxl=3,
+            active_heads=["scalar", "vector", "rank2", "spectral"],
+            spectral_bins=100,
+        )
+
+        zA, posA = _make_molecule(5, seed=10)
+        zB, posB = _make_molecule(4, seed=20)
+
+        # Forward A alone
+        with torch.no_grad():
+            result_A = model(z=zA, pos=posA)
+
+        # Forward A alongside B
+        z = torch.cat([zA, zB])
+        pos = torch.cat([posA, posB])
+        batch = torch.tensor([0] * 5 + [1] * 4, dtype=torch.long)
+        with torch.no_grad():
+            result_batch = model(z=z, pos=pos, batch=batch)
+
+        for key in ["scalar", "vector", "tensor", "spectrum"]:
+            assert torch.allclose(result_batch[key][0:1], result_A[key], atol=1e-4), \
+                f"Batch isolation failed for {key}"
+
+    def test_checkpoint_save_load(self, detanet_model, tmp_path):
+        """MTONet checkpoint save/load preserves inference results."""
+        model = make_mto_net(
+            detanet_model=detanet_model,
+            num_features=128, num_modes=4, mode_channels=32, maxl=3,
+            active_heads=["scalar", "vector", "rank2", "spectral"],
+            spectral_bins=100,
+        )
+        model.eval()
+        z, pos = _make_molecule(5)
+
+        with torch.no_grad():
+            result_before = model(z=z, pos=pos)
+
+        # Save
+        ckpt_path = tmp_path / "model.pt"
+        torch.save({
+            "model_state_dict": model.state_dict(),
+            "config": model.config.to_dict(),
+        }, ckpt_path)
+
+        # Load into a fresh model
+        loaded = make_mto_net(
+            detanet_model=detanet_model,
+            **model.config.to_dict(),
+        )
+        ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+        loaded.load_state_dict(ckpt["model_state_dict"])
+        loaded.eval()
+
+        with torch.no_grad():
+            result_after = loaded(z=z, pos=pos)
+
+        for key in ["scalar", "vector", "tensor", "spectrum"]:
+            assert torch.allclose(result_before[key], result_after[key], atol=1e-6), \
+                f"Checkpoint mismatch for {key}"
+
+    def test_gradient_flow_all_heads(self, detanet_model):
+        """Gradients flow through all readout heads."""
+        model = make_mto_net(
+            detanet_model=detanet_model,
+            num_features=128, num_modes=4, mode_channels=32, maxl=3,
+            active_heads=["scalar", "vector", "rank2", "spectral"],
+            spectral_bins=100,
+        )
+        z, pos = _make_molecule(5)
+
+        result = model(z=z, pos=pos)
+        loss = (
+            result["scalar"].sum()
+            + result["vector"].sum()
+            + result["tensor"].sum()
+            + result["spectrum"].sum()
+        )
+        loss.backward()
+
+        n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        params_with_grad = sum(
+            1 for p in model.parameters()
+            if p.requires_grad and p.grad is not None
+        )
+        assert params_with_grad > 0, "No parameters received gradients"
