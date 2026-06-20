@@ -929,6 +929,137 @@ Detailed planning documents are maintained alongside this CLAUDE.md:
 
 ---
 
+## 16. N16R4 / bjhpc_xxy_1 Operating Rules
+
+These are the verified N16R4 server operating rules. They override any hard-coded module or path assumptions from earlier documentation.
+
+### 16.1 Connection
+
+Use only `ssh bjhpc_xxy_1`. Do not use MCP, `ssh-mcp`, or alternate SSH aliases.
+
+### 16.2 Login / Compute Separation
+
+- **Login node** (`ln01`): editing, light checks, module discovery, Slurm submission only.
+- **GPU work**: must be submitted through Slurm. Never run training on the login node.
+- **salloc**: only for short debugging if explicitly approved. Not for formal experiments.
+
+### 16.3 Workspace
+
+- **Project root**: `/data/home/scwc008/run/xxy/MTO`
+- **General allowed root**: `/data/home/scwc008/run/xxy`
+- **Dataset files**: read-only unless explicitly approved.
+- **Temporary project scripts**: `/data/home/scwc008/run/xxy/MTO/tmp/`
+- **Forbidden**: `/tmp`, `/dev/shm` (except explicitly approved dataset staging inside Slurm).
+
+### 16.4 Filesystem
+
+- Do not install software or store large files in `$HOME`.
+- Use `/data/home/scwc008/run/xxy` for project and running data.
+- Do not use `/tmp` for project scripts.
+- Before destructive commands (`rm`, `mv`, `rsync --delete`), verify `pwd` and `readlink -f <target>` resolve inside `/data/home/scwc008/run/xxy`.
+
+### 16.5 Module / Environment
+
+The `module` command is NOT available in the default shell. Always source:
+
+```bash
+source /etc/profile.d/modules.sh
+```
+
+**Do not hard-code module versions.** Discover first:
+
+```bash
+module avail miniforge3
+module avail cuda
+conda env list
+```
+
+**Verified working stack** (as of 2026-06-20):
+
+```bash
+source /etc/profile.d/modules.sh
+module load miniforge3/25.11.0-1
+source activate dp320-torch
+```
+
+Python 3.10.20, torch 2.11.0+cu130, e3nn 0.4.4.
+
+**Reusable env loader**: `source scripts/hpc_env.sh`
+
+**Environment probe**: `bash scripts/probe_hpc_env.sh` (safe read-only discovery).
+
+If the verified module or env is unavailable, run `probe_hpc_env.sh` and update this section.
+
+### 16.6 Python Checks on Server
+
+Do not use fragile Python one-liners with nested f-strings over SSH. They cause SyntaxError.
+
+When Python inspection is needed on the server, write a heredoc script:
+
+```bash
+ssh bjhpc_xxy_1 'cd /data/home/scwc008/run/xxy/MTO && source scripts/hpc_env.sh && python MTO/tmp/check_<topic>.py'
+```
+
+Use simple print statements:
+```python
+print("key:", value)          # correct
+print(f"key: {value}")        # OK for simple vars
+print(f"key: {d['inner']}")   # NO — nested quote breakage over SSH
+```
+
+### 16.7 Slurm
+
+**Submission**:
+```bash
+sbatch -p gpu --gpus=1 ./run.sh
+```
+
+**Inside job scripts**:
+```bash
+#!/bin/bash
+#SBATCH --gpus=1
+
+cd /data/home/scwc008/run/xxy/MTO
+source scripts/hpc_env.sh
+python train.py
+```
+
+- Do not use `salloc` for formal experiments.
+- Use `parajobs` or `squeue -u scwc008` to inspect jobs.
+- Use `scancel <JOBID>` only when explicitly needed.
+- Every Slurm script must:
+  - cd into `/data/home/scwc008/run/xxy/MTO`
+  - source `scripts/hpc_env.sh`
+  - print environment information
+  - write logs under the project run directory
+  - avoid overwriting previous runs
+
+### 16.8 GPU Resource Assumptions
+
+- N16R4 GPU queue default: 1 GPU with CPU/memory per site config.
+- Do not request unusual CPU/memory unless justified.
+- Start with single-GPU smoke jobs. Use multi-seed only after smoke passes.
+- GPU preference: H200 > H100 > A800 (check Slurm availability).
+
+### 16.9 Job Monitoring
+
+After submitting any Slurm job, record:
+- job id
+- partition
+- script path
+- stdout/stderr path
+- run directory
+- checkpoint path
+- metrics path
+
+Monitor with `parajobs` or `squeue -u scwc008`. Do not claim job success until output artifacts are verified.
+
+### 16.10 Final Report After Each Remote Task
+
+Report: hostname, whoami, pwd, which python, python --version, commands executed, files created/modified, jobs submitted/cancelled, output paths, and confirmation that no files outside `/data/home/scwc008/run/xxy` were modified.
+
+---
+
 ## 12. Final Reminder
 
 The central engineering question is always:
