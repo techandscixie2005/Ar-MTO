@@ -1,14 +1,16 @@
-"""Test signed invariant routing: coefficient shapes, invariance, sign properties."""
+"""Test signed invariant routing: coefficient shapes, invariance, sign properties.
+
+All tests use batch-aware API: [K, N, 1] coefficients.
+"""
 
 import pytest
 import torch
 
 from ar_mto.signed_routing import SignedRouter
-from ar_mto.tensor_adapter import make_adapter
 
 
 def _make_h(N=5, C=128, maxl=3):
-    """Synthetic tensor features simulating DetaNet output."""
+    """Synthetic tensor features simulating DetaNet adapter output."""
     h = {}
     h[0] = torch.randn(N, C, 1)
     for l in range(1, maxl + 1):
@@ -51,14 +53,18 @@ class TestRoutingShapes:
         coeffs = router(h)
         assert coeffs[0].shape == (8, 5, 1)
 
-    def test_coefficient_same_for_all_l(self):
-        """Routing coefficients are generated from invariants, so they're
-        the same across l orders within a forward pass."""
-        router = SignedRouter(num_features=128, num_modes=8, maxl=3)
+    def test_order_specific_signs_different(self):
+        """With order_specific_signs=True, different l orders get different
+        sign projections, so coefficients may differ across orders."""
+        router = SignedRouter(num_features=128, num_modes=8, maxl=3,
+                              order_specific_signs=True)
         h = _make_h(5)
         coeffs = router(h)
-        for l in [1, 2, 3]:
-            assert torch.equal(coeffs[0], coeffs[l])
+        # With order-specific signs, coefficients can differ per l
+        # but shapes are correct and values are finite
+        for l in [0, 1, 2, 3]:
+            assert not torch.isnan(coeffs[l]).any()
+            assert not torch.isinf(coeffs[l]).any()
 
 
 class TestRoutingProperties:
@@ -79,20 +85,45 @@ class TestRoutingProperties:
             assert coeffs[l].min() >= -1.0
             assert coeffs[l].max() <= 1.0
 
-    def test_attention_sums_to_one(self):
-        """The attention part (before sign) should be normalized over atoms."""
-        # We test indirectly: the abs sum over atoms should be <= 1
-        # And for each mode, the "positive attention" component sums near 1
-        router = SignedRouter(num_features=128, num_modes=8, maxl=3)
+    def test_l2_normalization(self):
+        """L2 norm of coefficients per mode per molecule should be ~1."""
+        router = SignedRouter(num_features=128, num_modes=8, maxl=3,
+                              normalization="l2")
         h = _make_h(5)
         coeffs = router(h)
+        c0 = coeffs[0].squeeze(-1)  # [K, N]
+        l2_norms = c0.pow(2).sum(dim=-1).sqrt()  # [K]
+        # L2 norm per mode should be close to 1
+        assert torch.allclose(l2_norms, torch.ones_like(l2_norms), atol=1e-5), \
+            f"l2_norms per mode: {l2_norms}"
 
-        # If all signs were +1, sum over atoms = 1
-        # With sign mixing, abs sum <= 1 per mode
+    def test_abs_normalization(self):
+        """Abs sum of coefficients per mode per molecule should be ~1."""
+        router = SignedRouter(num_features=128, num_modes=8, maxl=3,
+                              normalization="abs")
+        h = _make_h(5)
+        coeffs = router(h)
         c0 = coeffs[0].squeeze(-1)  # [K, N]
         abs_sum = c0.abs().sum(dim=-1)  # [K]
-        assert (abs_sum <= 1.0 + 1e-5).all(), \
+        assert torch.allclose(abs_sum, torch.ones_like(abs_sum), atol=1e-5), \
             f"abs_sum per mode: {abs_sum}"
+
+    def test_batched_routing(self):
+        """Routing handles batched molecules correctly."""
+        router = SignedRouter(num_features=128, num_modes=8, maxl=3)
+        # Two molecules: 3 atoms + 4 atoms
+        N = 7
+        batch = torch.tensor([0, 0, 0, 1, 1, 1, 1], dtype=torch.long)
+        h = _make_h(N)
+        coeffs = router(h, batch=batch)
+
+        # Each molecule should have L2-normed coefficients separately
+        c0 = coeffs[0].squeeze(-1)  # [K, N]
+        for b_idx in range(2):
+            mask = (batch == b_idx)
+            mol_norms = c0[:, mask].pow(2).sum(dim=-1).sqrt()
+            assert torch.allclose(mol_norms, torch.ones_like(mol_norms), atol=1e-5), \
+                f"Molecule {b_idx} l2_norms: {mol_norms}"
 
     def test_deterministic(self):
         router = SignedRouter(num_features=128, num_modes=8, maxl=3)
@@ -125,7 +156,6 @@ class TestRoutingInvariance:
         router = SignedRouter(num_features=128, num_modes=8, maxl=3)
         N = 5
 
-        # Create features and rotated version
         h_orig = _make_h(N)
 
         # Build random rotation using quaternion
@@ -142,7 +172,7 @@ class TestRoutingInvariance:
         h_rot = {0: h_orig[0].clone()}  # l=0 invariant
         for l in [1, 2, 3]:
             D = o3.wigner_D(l, *o3.matrix_to_angles(R))
-            h_rot[l] = torch.einsum("ab,ncb->nca", D, h_orig[l])
+            h_rot[l] = torch.einsum("sd,ncd->ncs", D, h_orig[l])
 
         with torch.no_grad():
             c_orig = router(h_orig)

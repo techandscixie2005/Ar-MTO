@@ -83,8 +83,21 @@ class CGCoupling(nn.Module):
     Couples modes within the same mode index (self-coupling per mode per molecule):
         O_{b,k}^{(l1,p1)} ×_CG O_{b,k}^{(l2,p2)} → O_new_{b,k}^{(L, p1*p2)}
 
-    Uses e3nn FullyConnectedTensorProduct with instructions built from
-    parity-correct coupling paths.
+    Uses e3nn FullyConnectedTensorProduct with internal learnable weights.
+    No per-sample weight conditioning (removed due to equivariance failures
+    with large weight_numel scalar-conditioned paths).
+
+    .. note::
+
+        This module is **experimental**. The per-sample scalar-conditioned
+        weight path was removed after it produced non-equivariant outputs
+        depending on initialization (see Task 1.2b report). The module now
+        uses e3nn's internal learnable TP weights, which are equivariant
+        but lack input-dependent conditioning.
+
+        For production use (dipole, polarizability tasks), prefer
+        :class:`CGCouplingMinimal`, which has fixed, verified paths
+        without learned weights.
 
     Args:
         mode_channels: channels per mode (C)
@@ -118,21 +131,10 @@ class CGCoupling(nn.Module):
         # Build output irreps
         self.out_irreps = _paths_to_irreps_out(self.coupling_paths, mode_channels)
 
-        # Create the tensor product with explicit instructions
+        # Create the tensor product (uses internal learnable weights, no per-sample conditioning)
         self.tp = _make_coupling_tp(self.in_irreps, self.coupling_paths, mode_channels)
 
-        # Scalar conditioner: produce weights from l=0 features
-        # Input: mode_channels scalar features per mode
-        # Output: weight_numel for the TP
-        self.scalar_condition = nn.Sequential(
-            nn.Linear(mode_channels, mode_channels),
-            nn.SiLU(),
-            nn.Linear(mode_channels, self.tp.weight_numel),
-        )
-
         # Projection maps: merge coupled outputs back to canonical irreps
-        # Output irreps from TP may have multiple contributions per (L, p)
-        # We project them to mode_channels per (L, p)
         self._build_output_projections()
 
         # Precompute path table for diagnostics
@@ -162,6 +164,8 @@ class CGCoupling(nn.Module):
         O: dict[int | tuple, torch.Tensor],
     ) -> dict[int | tuple, torch.Tensor]:
         """Apply parity-correct CG coupling to MTO modes.
+
+        Uses e3nn FCTP with internal learnable weights (no per-sample conditioning).
 
         Args:
             O: dict key -> [B, K, C, 2l+1] MTO modes
@@ -202,13 +206,8 @@ class CGCoupling(nn.Module):
                         ))
                 x = torch.cat(segments)
 
-                # Scalar condition from l=0
-                key0 = (0, 1) if use_tuple_keys else 0
-                s = O[key0][b, k].squeeze(-1)  # [C]
-                weights = self.scalar_condition(s)
-
-                # Apply CG tensor product
-                y = self.tp(x, x, weight=weights)
+                # Apply CG tensor product with internal learnable weights
+                y = self.tp(x, x)
 
                 # Split output by (L, p) and project
                 offset = 0
@@ -220,7 +219,7 @@ class CGCoupling(nn.Module):
 
                     # Reshape to [mul, spatial_dim]
                     segment_flat = segment.reshape(mul, spatial_dim)
-                    # Project: [mul * C, sd] → [C, sd]
+                    # Project: [mul, sd] → [C, sd]
                     projected = self.projections[key_str](
                         segment_flat.T
                     ).T  # [C, sd]
