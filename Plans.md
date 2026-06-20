@@ -101,7 +101,7 @@ spec_skip_reason: >
 
 | Task | 内容 | DoD | Depends | Status |
 |------|------|-----|---------|--------|
-| 2.7 | **DetaNet/PyG compatibility gate**: (1) probe login-node env versions (2) Slurm GPU-job runs one-batch fwd/bwd through full MTO mu pipeline including DetaNet import (3) if segfault persists, diagnose and propose precise fix with env plan, no blind pip install | `outputs/reports/detanet_pyg_compat_report.md` with clear recommendation (proceed/fix/rebuild); `scripts/check_detanet_pyg_compat.py` and `scripts/run_check_detanet_pyg_compat.sh` committed; Plans.md updated with outcome | 2.6 | cc:完了 |
+| 2.7 | **DetaNet/PyG compatibility gate**: (1) probe login-node env versions (2) Slurm GPU-job runs one-batch fwd/bwd through full MTO mu pipeline including DetaNet import (3) if segfault persists, diagnose and propose precise fix with env plan, no blind pip install | `outputs/reports/detanet_pyg_compat_report.md` with clear recommendation (proceed/fix/rebuild); `scripts/check_detanet_pyg_compat.py` and `scripts/run_check_detanet_pyg_compat.sh` committed; Plans.md updated with outcome | 2.6 | cc:完了 [4932576] |
 
 **Acceptance criteria:**
 - A short Slurm GPU job proves the real `train_mu.py` dependency path can run one batch forward/backward without segfault; OR
