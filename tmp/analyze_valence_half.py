@@ -244,7 +244,6 @@ def compute_top_r_masking(model, test_data, device, r_values=None, max_mols=64):
             mr_err = F.mse_loss(mr_pred.reshape(-1, 3), target.reshape(-1, 3)).item()
             delta = torch.norm(mr_pred - full_pred).item()
             vmae = (mr_pred - target).abs().mean().item()
-            retention = sum(activity[0, list(keep)].item() for _ in [1]) if r > 0 else 0
             retention = activity[0, list(keep)].sum().item() / (total_act + 1e-10)
 
             agg[r]["retention"].append(retention)
