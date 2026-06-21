@@ -61,6 +61,10 @@ class MTOConfig:
         routing_hidden_dim: int = 64,
         gate_hidden_dim: int = 64,
         k_policy: str = "fixed",
+        k_max: int = 32,
+        k_min: int = 1,
+        k_rounding: str = "ceil",
+        k_cap_policy: str = "cap_and_report",
         normalization: str = "l2",
         order_specific_signs: bool = True,
         active_heads: list[str] | None = None,
@@ -82,6 +86,13 @@ class MTOConfig:
         self.routing_hidden_dim = routing_hidden_dim
         self.gate_hidden_dim = gate_hidden_dim
         self.k_policy = k_policy
+        # Normalize deprecated key name
+        if self.k_policy == "valence_adaptive":
+            self.k_policy = "valence_half"
+        self.k_max = k_max
+        self.k_min = k_min
+        self.k_rounding = k_rounding
+        self.k_cap_policy = k_cap_policy
         self.normalization = normalization
         self.order_specific_signs = order_specific_signs
         self.active_heads = active_heads or ["scalar", "vector", "rank2", "spectral"]
@@ -99,12 +110,19 @@ class MTONet(nn.Module):
     Args:
         detanet_model: DetaNet backbone (from make_latent_detanet)
         config: MTO configuration
+
+    Kmax: the padded mode bank size used by all modules.
+      - k_policy="fixed": Kmax = config.num_modes
+      - k_policy="valence_half": Kmax = config.k_max
     """
 
     def __init__(self, detanet_model: nn.Module, config: MTOConfig):
         super().__init__()
         self.detanet = detanet_model
         self.config = config
+
+        # Resolve Kmax: for valence_half, use k_max; for fixed, use num_modes
+        Kmax = config.k_max if config.k_policy == "valence_half" else config.num_modes
 
         # Tensor adapter
         self.adapter = make_adapter(
@@ -116,7 +134,7 @@ class MTONet(nn.Module):
         if config.use_signed_routing:
             self.router = SignedRouter(
                 num_features=config.num_features,
-                num_modes=config.num_modes,
+                num_modes=Kmax,
                 hidden_dim=config.routing_hidden_dim,
                 use_tensor_norms=not config.scalar_only,
                 maxl=0 if config.scalar_only else config.maxl,
@@ -131,13 +149,13 @@ class MTONet(nn.Module):
             self.mto = ScalarOnlyMTO(
                 num_features=config.num_features,
                 mode_channels=config.mode_channels,
-                num_modes=config.num_modes,
+                num_modes=Kmax,
             )
         else:
             self.mto = MTOModeAssembly(
                 num_features=config.num_features,
                 mode_channels=config.mode_channels,
-                num_modes=config.num_modes,
+                num_modes=Kmax,
                 maxl=config.maxl,
                 scalar_only=False,
             )
@@ -161,7 +179,7 @@ class MTONet(nn.Module):
             if config.gate_type == "tensor_information":
                 self.gate = TensorGate(
                     mode_channels=config.mode_channels,
-                    num_modes=config.num_modes,
+                    num_modes=Kmax,
                     maxl=config.maxl if not config.scalar_only else 0,
                     hidden_dim=config.gate_hidden_dim,
                     use_tensor_info=not config.scalar_only,
@@ -170,7 +188,7 @@ class MTONet(nn.Module):
             elif config.gate_type == "scalar_only":
                 self.gate = ScalarOnlyGate(
                     mode_channels=config.mode_channels,
-                    num_modes=config.num_modes,
+                    num_modes=Kmax,
                     maxl=config.maxl if not config.scalar_only else 0,
                     hidden_dim=config.gate_hidden_dim,
                     alpha=config.gate_alpha,
@@ -178,21 +196,23 @@ class MTONet(nn.Module):
             else:
                 self.gate = NoGate(
                     mode_channels=config.mode_channels,
-                    num_modes=config.num_modes,
+                    num_modes=Kmax,
                     maxl=config.maxl if not config.scalar_only else 0,
                 )
         else:
             self.gate = NoGate(
                 mode_channels=config.mode_channels,
-                num_modes=config.num_modes,
+                num_modes=Kmax,
                 maxl=config.maxl if not config.scalar_only else 0,
             )
 
         # Readouts — built on demand by active_heads
-        self._build_readouts()
+        self._build_readouts(Kmax)
 
-    def _build_readouts(self):
+    def _build_readouts(self, Kmax: int | None = None):
         """Build readout heads for active target types."""
+        if Kmax is None:
+            Kmax = self.config.num_modes
         self.scalar_readout = None
         self.vector_readout = None
         self.rank2_readout = None
@@ -203,26 +223,26 @@ class MTONet(nn.Module):
             if h == "scalar":
                 self.scalar_readout = ScalarReadout(
                     mode_channels=self.config.mode_channels,
-                    num_modes=self.config.num_modes,
+                    num_modes=Kmax,
                     hidden_dim=self.config.readout_hidden_dim,
                     out_dim=1,
                 )
             elif h == "vector":
                 self.vector_readout = VectorReadout(
                     mode_channels=self.config.mode_channels,
-                    num_modes=self.config.num_modes,
+                    num_modes=Kmax,
                     out_dim=1,
                 )
             elif h == "rank2":
                 self.rank2_readout = Rank2TensorReadout(
                     mode_channels=self.config.mode_channels,
-                    num_modes=self.config.num_modes,
+                    num_modes=Kmax,
                     out_dim=1,
                 )
             elif h == "spectral":
                 self.spectral_readout = SpectralReadout(
                     mode_channels=self.config.mode_channels,
-                    num_modes=self.config.num_modes,
+                    num_modes=Kmax,
                     num_spectral_bins=self.config.spectral_bins,
                     maxl=self.config.maxl,
                     hidden_dim=256,
@@ -246,7 +266,8 @@ class MTONet(nn.Module):
             batch: batch indices [N], None for single molecule
             edge_index: precomputed edges [2, E]
             return_modes: include MTO modes in output
-            mode_mask: [B, Kmax] precomputed mode mask (valence-adaptive)
+            mode_mask: [B, Kmax] precomputed mode mask (valence-adaptive).
+                       If None and k_policy="valence_half", computed automatically.
             return_diagnostics: include routing/gate statistics
 
         Returns:
@@ -257,6 +278,7 @@ class MTONet(nn.Module):
                 spectrum: [B, num_bins] (if spectral head active)
                 modes: dict of MTO modes (if return_modes=True)
                 mode_mask: [B, Kmax] active mode mask
+                ks: [B] per-molecule K values (if valence_half)
                 diagnostics: routing/gate stats dict (if return_diagnostics=True)
         """
         N = z.shape[0]
@@ -264,6 +286,15 @@ class MTONet(nn.Module):
 
         if batch is None:
             batch = torch.zeros(N, dtype=torch.long, device=device)
+
+        # Auto-compute mode_mask from k_policy
+        if mode_mask is None and self.config.k_policy == "valence_half":
+            mode_mask, ks = compute_valence_adaptive_k(
+                z=z, batch=batch, max_modes=self.config.k_max,
+                k_min=self.config.k_min, k_rounding=self.config.k_rounding,
+            )
+        else:
+            ks = None
 
         # ── DetaNet backbone ──
         if edge_index is None:
@@ -279,9 +310,9 @@ class MTONet(nn.Module):
         if self.router is not None:
             coeffs = self.router(h, batch=batch)  # dict l -> [K, N, 1]
         else:
-            K = self.config.num_modes
+            Kmax = self.config.k_max if self.config.k_policy == "valence_half" else self.config.num_modes
             coeffs = {
-                l: torch.ones(K, N, 1, device=device) / N
+                l: torch.ones(Kmax, N, 1, device=device) / N
                 for l in h.keys()
             }
 
@@ -292,7 +323,7 @@ class MTONet(nn.Module):
 
         # ── CG coupling ──
         if self.cg is not None:
-            O_coupled = self.cg(O)  # dict (l,p) -> [B, K, C, 2l+1]
+            O_coupled = self.cg(O, mode_mask=mode_mask)  # dict (l,p) -> [B, K, C, 2l+1]
 
             # Merge: CG output replaces original for orders it covers
             # Preserve original O for orders not coupled
@@ -327,11 +358,13 @@ class MTONet(nn.Module):
 
         if mode_mask is not None:
             result["mode_mask"] = mode_mask
+            if ks is not None:
+                result["ks"] = ks
 
         if return_diagnostics:
             diag: dict = {}
             if self.router is not None:
-                diag["route_stats"] = self.router.route_stats(coeffs)
+                diag["route_stats"] = self.router.route_stats(coeffs, mode_mask=mode_mask)
             diag["gate_stats"] = self.gate.gate_stats(O)
             result["diagnostics"] = diag
 
@@ -354,7 +387,8 @@ class MTONet(nn.Module):
             batch = torch.zeros(z.shape[0], dtype=torch.long, device=z.device)
 
         mode_mask, ks = compute_valence_adaptive_k(
-            z=z, batch=batch, max_modes=self.config.num_modes
+            z=z, batch=batch, max_modes=self.config.k_max,
+            k_min=self.config.k_min, k_rounding=self.config.k_rounding,
         )
 
         return self.forward(

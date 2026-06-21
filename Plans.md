@@ -125,11 +125,26 @@ spec_skip_reason: >
 
 | Task | 内容 | DoD | Depends | Status |
 |------|------|-----|---------|--------|
-| 3.1 | Smoke 1: 64 molecules, 2 epochs | No NaN/inf, finite loss, checkpoint saves & reloads | Phase 2, 2.7 | cc:TODO |
-| 3.2 | Smoke 2: 500 molecules, 5 epochs | No NaN/inf, loss decreases, metrics produced | 3.1 | cc:TODO |
-| 3.3 | Smoke 3: 5000 molecules, 10 epochs | No NaN/inf, validation metrics reasonable | 3.2 | cc:TODO |
-| 3.4 | Full QM9S, seed=0 | Complete run with all outputs saved | 3.3 | cc:TODO |
+| 3.1 | Smoke 1: 64 molecules, 2 epochs | No NaN/inf, finite loss, checkpoint saves & reloads | Phase 2, 2.7 | cc:完了 [93767] |
+| 3.2 | Smoke 2: 500 molecules, 5 epochs | No NaN/inf, loss decreases, metrics produced | 3.1 | cc:完了 [93768] |
+| 3.3 | Smoke 3: 5000 molecules, 10 epochs | No NaN/inf, validation metrics reasonable | 3.2 | cc:完了 [93775] |
+| 3.3a | Analyze 3.3 effective MTO modes (Gini, K_eff, top-r masking, LOMO, gate stats) | `outputs/reports/phase3_3_effective_mto_analysis.md` + tables + 5 figures. Slurm 93803 on d1n41a14g01 (A800). See `outputs/reports/phase3_3_effective_mto_analysis.md` for full results. | 3.3 | cc:完了 [93803] |
+| 3.4 | Full QM9S, seed=0 | Complete run with all outputs saved | 3.3, 3.3a | cc:blocked — Slurm 93807 on d1n41a23g03 (A800), 20ep. E1 R²=0.995, ~103min/ep, ~33h ETA. Check: `squeue -u scwc008` / `grep "^epoch" runs/phase3_4_s0_93807.out | tail -3`. |
 | 3.5 | Full QM9S, seeds=1,2,3,4 | All 5 seeds complete with all output artifacts | 3.4 | cc:TODO |
+
+---
+
+## Phase 3.3b: Valence-Half Adaptive K for Mu
+
+| Task | 内容 | DoD | Depends | Status |
+|------|------|-----|---------|--------|
+| 3.3b.1 | Inspect mask propagation through full pipeline (tensor_adapter→router→MTO→CG→gate→readout→checkpoint) and fix all gaps (router mask support, CG mask support, train_mu.py k_policy wiring) | All modules accept and correctly use mode_mask; k_policy=valence_half flows end-to-end | 3.3a | cc:TODO |
+| 3.3b.2 | Dataset valence audit for QM9S subset_medium: compute N_val, K_half distributions, produce tables/figures/report, recommend K_max | `outputs/tables/qm9s_valence_k_distribution.csv` + `outputs/figures/qm9s_valence_k_distribution.pdf` + `outputs/reports/qm9s_valence_k_audit.md` | 3.3b.1 | cc:TODO |
+| 3.3b.3 | Implement config options: k_policy, k_max, k_min, k_rounding, k_cap_policy in MTOConfig + new config file mto_valence_half.yaml | `configs/model/mto_valence_half.yaml` works with --dry-run; fixed-K configs unchanged | 3.3b.2 | cc:TODO |
+| 3.3b.4 | Add/update tests: valence_half K computation, mode_mask shapes, inactive-mode isolation, routing-softmax-over-active, vector-readout-ignores-inactive, top-r-masking-never-inactive, fwd/bwd/checkpoint, batch isolation | `pytest tests/test_valence_adaptive_k.py -v` all pass | 3.3b.3 | cc:TODO |
+| 3.3b.5 | Smoke training: valence_half vs fixed-K=8 on 5000 molecules, 10 epochs, seed=0, target=mu | Both configs complete 10 epochs; no NaN/inf; checkpoints saved; metrics produced | 3.3b.4 | cc:TODO |
+| 3.3b.6 | Full diagnostics: K_eff absolute/relative, entropy, PR, top-r masking, LOMO, order masking, correlations, gate stats | `outputs/tables/phase3_3_valence_half_*.csv` + `outputs/figures/phase3_3_valence_half_mu/` generated | 3.3b.5 | cc:TODO |
+| 3.3b.7 | Write outputs: tables, figures, report answering all 10 questions | `outputs/reports/phase3_3_valence_half_mu_analysis.md` with all 10 Q&A | 3.3b.6 | cc:TODO |
 
 ---
 

@@ -38,6 +38,13 @@ import yaml
 SRC_DIR = Path(__file__).resolve().parent.parent / "src"
 sys.path.insert(0, str(SRC_DIR))
 
+# Install PyG fallbacks before any data loading or DetaNet import.
+# On N16R4, torch_geometric C++ extensions segfault with torch 2.11.0+cu130.
+# _ensure_pyg_available() installs pure-PyTorch stubs for torch_geometric/torch_scatter
+# so that torch.load can unpickle PyG Data objects without triggering a C++ segfault.
+from ar_mto.detanet_bridge import _ensure_pyg_available  # noqa: E402
+_ensure_pyg_available()
+from ar_mto.detanet_bridge import is_pyg_fallback_active  # noqa: E402
 
 # ============================================================================
 # Metrics
@@ -246,10 +253,14 @@ class TrainingState:
             return
         path = self.run_dir / "metrics.csv"
         keys = list(self.metrics_history[0].keys())
+        for row in self.metrics_history[1:]:
+            for k in row:
+                if k not in keys:
+                    keys.append(k)
         with open(path, "w") as f:
             f.write(",".join(keys) + "\n")
             for row in self.metrics_history:
-                f.write(",".join(str(row[k]) for k in keys) + "\n")
+                f.write(",".join(str(row.get(k, "")) for k in keys) + "\n")
 
 
 def _to_serializable(obj):
@@ -379,6 +390,10 @@ def dry_run(config_path: str, model_config: dict, device: torch.device):
     print("=" * 60)
     print("DRY RUN: %s" % config_path)
     print("=" * 60)
+
+    # Log PyG fallback status
+    from ar_mto.detanet_bridge import is_pyg_fallback_active
+    print("\nPyG fallback active: %s" % is_pyg_fallback_active())
 
     # Build model
     print("\n[1] Building MTONet...")
@@ -571,6 +586,18 @@ def main_train(args):
         print("Default split: train=%d, val=%d, test=%d" % (
             len(train_data), len(val_data), len(test_data)))
 
+    # Log PyG fallback status and profile radius_graph
+    from ar_mto.detanet_bridge import is_pyg_fallback_active
+    print("\nPyG fallback active: %s" % is_pyg_fallback_active())
+
+    # Profile radius_graph fallback on first batch
+    from ar_mto.detanet_bridge import compute_radius_edges
+    t_rg = time.time()
+    _sample = train_data[0] if isinstance(train_data, list) else train_data[0]
+    _rg_result = compute_radius_edges(_sample.pos, 5.0)
+    t_rg_elapsed = time.time() - t_rg
+    print("radius_graph fallback time: %.4fs (edges: %d)" % (t_rg_elapsed, _rg_result.shape[-1]))
+
     # Build model
     print("Building MTONet...")
     from ar_mto.mto_net import make_mto_net
@@ -677,6 +704,108 @@ def main_train(args):
     # Save test results
     with open(run_dir / "test_metrics.json", "w") as f:
         json.dump(test_metrics, f, indent=2)
+
+    # Save full metrics history as JSON
+    with open(run_dir / "metrics.json", "w") as f:
+        json.dump(state.metrics_history, f, indent=2)
+
+    # Save environment snapshot
+    try:
+        import subprocess
+        env_info = {
+            "hostname": subprocess.run(["hostname"], capture_output=True, text=True).stdout.strip(),
+            "python_version": subprocess.run(
+                [sys.executable, "--version"], capture_output=True, text=True
+            ).stdout.strip(),
+            "torch_version": torch.__version__,
+            "cuda_available": torch.cuda.is_available(),
+            "cuda_device_count": torch.cuda.device_count() if torch.cuda.is_available() else 0,
+        }
+        try:
+            from ar_mto.detanet_bridge import is_pyg_fallback_active as _pyg_fb
+            env_info["pyg_fallback_active"] = _pyg_fb()
+        except Exception:
+            env_info["pyg_fallback_active"] = None
+        with open(run_dir / "environment.txt", "w") as f:
+            for k, v in env_info.items():
+                f.write("%s: %s\n" % (k, v))
+    except Exception:
+        pass
+
+    # Save git state
+    try:
+        import subprocess
+        git_info = {
+            "commit": subprocess.run(
+                ["git", "rev-parse", "HEAD"], capture_output=True, text=True, cwd=SRC_DIR.parent
+            ).stdout.strip(),
+            "branch": subprocess.run(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True,
+                cwd=SRC_DIR.parent
+            ).stdout.strip(),
+            "diff": subprocess.run(
+                ["git", "diff", "--stat"], capture_output=True, text=True, cwd=SRC_DIR.parent
+            ).stdout.strip(),
+        }
+        with open(run_dir / "git_state.json", "w") as f:
+            json.dump(git_info, f, indent=2)
+    except Exception:
+        pass
+
+    # Save config.yaml (canonical run config)
+    with open(run_dir / "config.yaml", "w") as f:
+        yaml.safe_dump(model_config, f)
+
+    # Save final MTO cache as named artifact
+    import glob as _glob
+    mto_files = sorted(_glob.glob(str(run_dir / "mto_cache_epoch*.pt")))
+    if mto_files:
+        import shutil as _shutil
+        _shutil.copy(mto_files[-1], str(run_dir / "mto_cache_test.pt"))
+
+    # Save final routing/mode/gate stats as named artifacts
+    routing_files = sorted(_glob.glob(str(run_dir / "routing_stats_epoch*.pt")))
+    if routing_files:
+        try:
+            _final_stats = torch.load(routing_files[-1], map_location="cpu", weights_only=False)
+            for _key_suffix, _key in [("routing_stats.json", "route_stats"),
+                                       ("mode_stats.json", "route_stats"),
+                                       ("gate_stats.json", "gate_stats")]:
+                try:
+                    _data = _final_stats.get(_key, {})
+                    with open(run_dir / _key_suffix, "w") as _f:
+                        json.dump(_to_serializable(_data), _f, indent=2)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    # Save predictions as CSV
+    _pred_files = sorted(_glob.glob(str(run_dir / "pred_test_epoch*.pt")))
+    if _pred_files:
+        try:
+            _pred_data = torch.load(_pred_files[-1], map_location="cpu", weights_only=False)
+            _pred_arr = _pred_data["pred"].reshape(-1, 3)
+            _targ_arr = _pred_data["target"].reshape(-1, 3)
+            import numpy as _np
+            _rows = []
+            for _i in range(_pred_arr.shape[0]):
+                _rows.append({
+                    "idx": _i,
+                    "pred_x": float(_pred_arr[_i, 0]),
+                    "pred_y": float(_pred_arr[_i, 1]),
+                    "pred_z": float(_pred_arr[_i, 2]),
+                    "target_x": float(_targ_arr[_i, 0]),
+                    "target_y": float(_targ_arr[_i, 1]),
+                    "target_z": float(_targ_arr[_i, 2]),
+                })
+            import csv as _csv
+            with open(run_dir / "predictions_test.csv", "w", newline="") as _f:
+                _w = _csv.DictWriter(_f, fieldnames=_rows[0].keys())
+                _w.writeheader()
+                _w.writerows(_rows)
+        except Exception:
+            pass
 
     print("\nDone. Run directory: %s" % run_dir)
     return 0

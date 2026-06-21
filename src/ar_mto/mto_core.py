@@ -219,19 +219,23 @@ def compute_valence_adaptive_k(
     batch: torch.Tensor | None = None,
     electrons_per_valence: dict[int, int] | None = None,
     max_modes: int = 32,
+    k_min: int = 1,
+    k_rounding: str = "ceil",
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Compute K per molecule from neutral-atom valence electron counts.
 
-    K = max(1, ceil(N_val / 2))  — one mode per ~2 valence electrons.
+    K = clamp(ceil(N_val / 2), min=k_min, max=max_modes)
 
     Args:
         z: [N] atomic numbers
         batch: [N] molecule index per atom
         electrons_per_valence: dict mapping Z → valence electrons
-        max_modes: upper bound on K
+        max_modes: upper bound on K (k_max)
+        k_min: lower bound on K
+        k_rounding: "ceil" (default) or "floor"
 
     Returns:
-        mode_mask: [B, Kmax] boolean mask
+        mode_mask: [B, max_modes] boolean mask
         ks: [B] int K values per molecule
     """
     if electrons_per_valence is None:
@@ -276,8 +280,12 @@ def compute_valence_adaptive_k(
             )
         ks[b_idx] += electrons_per_valence[z_val]
 
-    # K = ceil(N_val / 2), clamped to [1, max_modes]
-    ks = torch.clamp((ks + 1) // 2, min=1, max=max_modes)
+    # K = rounding(N_val / 2), clamped to [k_min, max_modes]
+    if k_rounding == "floor":
+        ks = (ks // 2)
+    else:  # ceil
+        ks = (ks + 1) // 2
+    ks = torch.clamp(ks, min=k_min, max=max_modes)
 
     # Always return mask of shape [num_molecules, max_modes] for
     # dimension compatibility with MTO/Gate/Readout modules.

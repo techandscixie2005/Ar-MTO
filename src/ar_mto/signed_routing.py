@@ -282,17 +282,28 @@ class SignedRouter(nn.Module):
         return coeffs
 
     def route_stats(
-        self, coeffs: dict[int | tuple, torch.Tensor]
+        self, coeffs: dict[int | tuple, torch.Tensor],
+        mode_mask: torch.Tensor | None = None,
     ) -> dict:
         """Compute routing statistics for logging and diagnostics.
 
         Args:
             coeffs: dict key -> [K, N, 1] routing coefficients
+            mode_mask: [B, K] boolean, True = active. Stats computed only over active.
 
         Returns:
             dict of routing statistics
         """
         c0 = next(iter(coeffs.values())).squeeze(-1)  # [K, N]
+        if mode_mask is not None:
+            # Only use active mode coefficients
+            # coeffs: [K, N] → need mask over K dimension
+            mask = mode_mask.to(c0.device)  # [B, K]
+            # Per-molecule, per-mode: weight by whether mode is active
+            # For simplicity, flatten and filter
+            c0_active = c0[mask.any(dim=0)]  # modes that are active in at least one molecule
+            if c0_active.numel() > 0:
+                c0 = c0_active
         return {
             "route_entropy": -(
                 F.softmax(c0, dim=-1) * F.log_softmax(c0 + _EPSILON, dim=-1)

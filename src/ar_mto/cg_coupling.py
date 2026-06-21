@@ -162,6 +162,7 @@ class CGCoupling(nn.Module):
     def forward(
         self,
         O: dict[int | tuple, torch.Tensor],
+        mode_mask: torch.Tensor | None = None,
     ) -> dict[int | tuple, torch.Tensor]:
         """Apply parity-correct CG coupling to MTO modes.
 
@@ -169,12 +170,16 @@ class CGCoupling(nn.Module):
 
         Args:
             O: dict key -> [B, K, C, 2l+1] MTO modes
+            mode_mask: [B, K] boolean. Inactive modes are skipped.
 
         Returns:
             O_coupled: dict (l, p) -> [B, K, C, 2l+1] coupled modes
         """
         B, K = O[next(iter(O.keys()))].shape[:2]
         device = O[next(iter(O.keys()))].device
+
+        if mode_mask is not None:
+            mode_mask = mode_mask.to(device)
 
         # Determine key scheme
         sample_key = next(iter(O.keys()))
@@ -188,8 +193,15 @@ class CGCoupling(nn.Module):
         for _mul, (L, p) in self.out_irreps:
             results.setdefault((L, p), [])
 
+        # Track indices of processed modes for correct reshape
+        processed_indices = []  # list of (b, k) for processed modes
+
         for b in range(B):
             for k in range(K):
+                # Skip inactive modes
+                if mode_mask is not None and not mode_mask[b, k]:
+                    continue
+                processed_indices.append((b, k))
                 # Build flat irreps vector
                 segments = []
                 for (l, p) in canonical_keys:
@@ -226,12 +238,23 @@ class CGCoupling(nn.Module):
                     results[(L, p)].append(projected.unsqueeze(0))  # [1, C, sd]
                     offset += total_dim
 
-        # Stack results: [B*K, C, sd] → [B, K, C, sd]
+        # Stack results into full [B, K, C, 2L+1] tensors
         O_coupled: dict[tuple[int, int], torch.Tensor] = {}
         for (L, p), tensors in results.items():
             if tensors:
-                stacked = torch.stack(tensors, dim=0)  # [B*K, C, sd]
-                O_coupled[(L, p)] = stacked.reshape(B, K, self.mode_channels, 2 * L + 1)
+                # Start with zero tensor, scatter active modes in
+                O_coupled[(L, p)] = torch.zeros(
+                    B, K, self.mode_channels, 2 * L + 1,
+                    device=device, dtype=tensors[0].dtype,
+                )
+                for idx, (b, k) in enumerate(processed_indices):
+                    O_coupled[(L, p)][b, k] = tensors[idx]
+            else:
+                # No active modes — return all-zeros
+                O_coupled[(L, p)] = torch.zeros(
+                    B, K, self.mode_channels, 2 * L + 1,
+                    device=device, dtype=O[next(iter(O.keys()))].dtype,
+                )
 
         return O_coupled
 
@@ -314,12 +337,14 @@ class CGCouplingMinimal(nn.Module):
         ]
 
     def forward(
-        self, O: dict[int | tuple, torch.Tensor]
+        self, O: dict[int | tuple, torch.Tensor],
+        mode_mask: torch.Tensor | None = None,
     ) -> dict[int | tuple, torch.Tensor]:
         """Apply minimal CG coupling per mode per molecule.
 
         Args:
             O: dict key -> [B, K, C, 2l+1] MTO modes
+            mode_mask: [B, K] boolean, True = active. Inactive modes are skipped.
 
         Returns:
             O_coupled: dict (l, p) -> [B, K, C, 2l+1] coupled modes
@@ -349,13 +374,20 @@ class CGCouplingMinimal(nn.Module):
             return O  # nothing to couple
 
         # Accumulate one tensor per (b, k, order): sum across all paths for that order
+        device = o0.device
         result_0e = o0.new_zeros(B, K, C, 1)
         result_1o = o1.new_zeros(B, K, C, 3) if o1 is not None else None
         result_2e = o2.new_zeros(B, K, C, 5) if o2 is not None else None
         result_3o = o3.new_zeros(B, K, C, 7) if o3 is not None else None
 
+        if mode_mask is not None:
+            mode_mask = mode_mask.to(device)
+
         for b in range(B):
             for k in range(K):
+                # Skip inactive modes
+                if mode_mask is not None and not mode_mask[b, k]:
+                    continue
                 s = o0[b, k].reshape(-1)                 # [C]
 
                 # 0e × 0e → 0e
