@@ -1,0 +1,31 @@
+# Fixed K=32 MTO-Net configuration for K-scaling experiments.
+# Same as mto_full.yaml but with num_modes=32.
+# This matches the k_max=32 used in valence_half for direct comparison.
+
+num_features: 128
+num_modes: 32
+mode_channels: 64
+maxl: 3
+scalar_only: false
+
+use_signed_routing: true
+use_cg_coupling: true
+use_tensor_gate: true
+
+coupling_type: "minimal"
+gate_type: "tensor_information"
+k_policy: "fixed"
+normalization: "l2"
+order_specific_signs: true
+gate_alpha: 0.1
+
+active_heads:
+  - scalar
+  - vector
+  - rank2
+  - spectral
+
+routing_hidden_dim: 64
+gate_hidden_dim: 64
+readout_hidden_dim: 128
+spectral_bins: 3501

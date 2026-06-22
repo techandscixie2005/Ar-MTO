@@ -1,0 +1,29 @@
+# DetaNet direct sum-pooling baseline for μ prediction.
+# DetaNet → per-atom sum pooling → channel mix → vector readout.
+# No MTO mode assembly. Symmetry-legal: sum of equivariant features is equivariant.
+
+num_features: 128
+num_modes: 1
+mode_channels: 64
+maxl: 3
+scalar_only: false
+
+use_signed_routing: false
+use_cg_coupling: false
+use_tensor_gate: false
+
+coupling_type: "minimal"
+gate_type: "no_gate"
+k_policy: "fixed"
+normalization: "l2"
+order_specific_signs: true
+gate_alpha: 0.1
+baseline_mode: "direct_sum"
+
+active_heads:
+  - vector
+
+routing_hidden_dim: 64
+gate_hidden_dim: 64
+readout_hidden_dim: 128
+spectral_bins: 3501

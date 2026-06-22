@@ -1,0 +1,26 @@
+# Ablation config: full tensor MTO without invariant gating (NoGate).
+
+num_features: 128
+num_modes: 8
+mode_channels: 64
+maxl: 3
+scalar_only: false
+
+use_signed_routing: true
+use_cg_coupling: true
+use_tensor_gate: false
+
+coupling_type: "minimal"
+gate_type: "no_gate"
+k_policy: "fixed"
+normalization: "l2"
+order_specific_signs: true
+
+active_heads:
+  - scalar
+  - vector
+  - rank2
+  - spectral
+
+routing_hidden_dim: 64
+spectral_bins: 3501

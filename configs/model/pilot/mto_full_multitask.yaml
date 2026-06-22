@@ -1,0 +1,30 @@
+# Full tensor MTO K=8 μ+UV multitask.
+# Both μ (vector) and UV (spectral) heads with joint training.
+# μ loss: MSE on vector components.
+# UV loss: MSE on broadened transition spectrum.
+
+num_features: 128
+num_modes: 8
+mode_channels: 64
+maxl: 3
+scalar_only: false
+
+use_signed_routing: true
+use_cg_coupling: true
+use_tensor_gate: true
+
+coupling_type: "minimal"
+gate_type: "tensor_information"
+k_policy: "fixed"
+normalization: "l2"
+order_specific_signs: true
+gate_alpha: 0.1
+
+active_heads:
+  - vector
+  - spectral
+
+routing_hidden_dim: 64
+gate_hidden_dim: 64
+readout_hidden_dim: 128
+spectral_bins: 3501

@@ -1,0 +1,32 @@
+# Canonical full-model MTO-Net configuration.
+# Uses the real production path: true tensor MTO, batch-aware signed routing,
+# parity-correct CG coupling, invariant tensor-information gate,
+# scalar/vector/rank2/spectral heads.
+
+num_features: 128
+num_modes: 8
+mode_channels: 64
+maxl: 3
+scalar_only: false
+
+use_signed_routing: true
+use_cg_coupling: true
+use_tensor_gate: true
+
+coupling_type: "minimal"          # "minimal" or "full"
+gate_type: "tensor_information"   # "tensor_information", "scalar_only", or "no_gate"
+k_policy: "fixed"                 # "fixed" or "valence_adaptive"
+normalization: "l2"               # "l2" (canonical) or "abs" (alternative)
+order_specific_signs: true
+gate_alpha: 0.1
+
+active_heads:
+  - scalar
+  - vector
+  - rank2
+  - spectral
+
+routing_hidden_dim: 64
+gate_hidden_dim: 64
+readout_hidden_dim: 128
+spectral_bins: 3501

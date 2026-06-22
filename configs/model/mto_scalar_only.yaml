@@ -1,0 +1,27 @@
+# Scalar-only MTO ablation config.
+# Uses only l=0 features — explicitly named scalar_only_mto.
+
+num_features: 128
+num_modes: 8
+mode_channels: 64
+maxl: 0
+scalar_only: true
+
+use_signed_routing: true
+use_cg_coupling: false
+use_tensor_gate: true
+
+coupling_type: "minimal"
+gate_type: "scalar_only"
+k_policy: "fixed"
+normalization: "l2"
+order_specific_signs: false
+gate_alpha: 0.1
+
+active_heads:
+  - scalar
+
+routing_hidden_dim: 64
+gate_hidden_dim: 64
+readout_hidden_dim: 128
+spectral_bins: 3501

@@ -1,0 +1,48 @@
+# Full QM9S valence_half adaptive K configuration.
+# K_bank(mol) = ceil(N_valence(mol) / 2), capped at k_max.
+# For full QM9S (~130k molecules), this tests whether sparse mode usage
+# scales to the full dataset.
+#
+# Scientific note: K=valence/2 is a capacity prior, not a physical orbital count.
+# This config is prepared but NOT submitted — approval required after 3.3c results.
+
+num_features: 128
+num_modes: 32           # used only as fallback when k_policy=fixed
+mode_channels: 64
+maxl: 3
+scalar_only: false
+
+use_signed_routing: true
+use_cg_coupling: true
+use_tensor_gate: true
+
+coupling_type: "minimal"
+gate_type: "tensor_information"
+k_policy: "valence_half"
+k_max: 32
+k_min: 1
+k_rounding: "ceil"
+k_cap_policy: "cap_and_report"
+normalization: "l2"
+order_specific_signs: true
+gate_alpha: 0.1
+
+active_heads:
+  - scalar
+  - vector
+  - rank2
+  - spectral
+
+routing_hidden_dim: 64
+gate_hidden_dim: 64
+readout_hidden_dim: 128
+spectral_bins: 3501
+
+# Full QM9S training hyperparameters
+batch_size: 64
+epochs: 200
+lr: 0.0005
+seed: 0
+grad_clip: 1.0
+val_every: 10
+save_every: 10

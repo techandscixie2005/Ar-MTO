@@ -1,0 +1,30 @@
+# Scalar attention pooling baseline for μ prediction.
+# DetaNet → scalar attention pooling over atoms → readout.
+# Attention weights from invariant l=0 features.
+# Symmetry-legal: invariant attention weights over equivariant per-atom features.
+
+num_features: 128
+num_modes: 1
+mode_channels: 64
+maxl: 3
+scalar_only: false
+
+use_signed_routing: false
+use_cg_coupling: false
+use_tensor_gate: false
+
+coupling_type: "minimal"
+gate_type: "no_gate"
+k_policy: "fixed"
+normalization: "l2"
+order_specific_signs: true
+gate_alpha: 0.1
+baseline_mode: "attn_pool"
+
+active_heads:
+  - vector
+
+routing_hidden_dim: 64
+gate_hidden_dim: 64
+readout_hidden_dim: 128
+spectral_bins: 3501

@@ -71,6 +71,7 @@ class MTOConfig:
         readout_hidden_dim: int = 128,
         spectral_bins: int = 3501,
         gate_alpha: float = 0.1,
+        baseline_mode: str = "none",  # "none", "direct_sum", "attn_pool"
         **kwargs,
     ):
         self.num_features = num_features
@@ -99,6 +100,7 @@ class MTOConfig:
         self.readout_hidden_dim = readout_hidden_dim
         self.spectral_bins = spectral_bins
         self.gate_alpha = gate_alpha
+        self.baseline_mode = baseline_mode  # "none", "direct_sum", "attn_pool"
 
     def to_dict(self) -> dict:
         return {k: v for k, v in self.__dict__.items()}
@@ -287,15 +289,6 @@ class MTONet(nn.Module):
         if batch is None:
             batch = torch.zeros(N, dtype=torch.long, device=device)
 
-        # Auto-compute mode_mask from k_policy
-        if mode_mask is None and self.config.k_policy == "valence_half":
-            mode_mask, ks = compute_valence_adaptive_k(
-                z=z, batch=batch, max_modes=self.config.k_max,
-                k_min=self.config.k_min, k_rounding=self.config.k_rounding,
-            )
-        else:
-            ks = None
-
         # ── DetaNet backbone ──
         if edge_index is None:
             edge_index = compute_radius_edges(
@@ -305,6 +298,28 @@ class MTONet(nn.Module):
 
         # ── Tensor adapter → h0..h3 ──
         h = self.adapter(S, T)  # dict l -> [N, C, 2l+1]
+
+        # ── Baseline dispatch: bypass MTO for direct pooling baselines ──
+        if self.config.baseline_mode != "none":
+            return self._forward_baseline(
+                h, batch=batch, return_modes=return_modes,
+                return_diagnostics=return_diagnostics,
+            )
+
+        # Auto-compute mode_mask from k_policy
+        B = int(batch.max().item()) + 1
+        Kmax = self.config.k_max if self.config.k_policy == "valence_half" else self.config.num_modes
+        if mode_mask is None:
+            if self.config.k_policy == "valence_half":
+                mode_mask, ks = compute_valence_adaptive_k(
+                    z=z, batch=batch, max_modes=self.config.k_max,
+                    k_min=self.config.k_min, k_rounding=self.config.k_rounding,
+                )
+            else:
+                mode_mask = torch.ones(B, Kmax, dtype=torch.bool, device=device)
+                ks = None
+        else:
+            ks = None
 
         # ── Signed routing ──
         if self.router is not None:
@@ -367,6 +382,124 @@ class MTONet(nn.Module):
                 diag["route_stats"] = self.router.route_stats(coeffs, mode_mask=mode_mask)
             diag["gate_stats"] = self.gate.gate_stats(O)
             result["diagnostics"] = diag
+
+        return result
+
+    def _forward_baseline(
+        self,
+        h: dict[int, torch.Tensor],
+        batch: torch.Tensor,
+        return_modes: bool = False,
+        return_diagnostics: bool = False,
+    ) -> dict:
+        """Pooling baseline forward: DetaNet features → pool → readout.
+
+        baseline_mode="direct_sum": Per-atom sum pooling over tensor features.
+        baseline_mode="attn_pool": Learned scalar attention pooling.
+
+        Both are symmetry-legal: sum of equivariant per-atom features
+        preserves equivariance; attention weights are invariant.
+        """
+        B = int(batch.max().item()) + 1
+        device = h[0].device
+        C = self.config.mode_channels
+
+        # ── Pool atom features to molecule level ──
+        pooled: dict[int, torch.Tensor] = {}  # l -> [B, C, 2l+1]
+
+        if self.config.baseline_mode == "direct_sum":
+            # Sum pooling over same-batch atoms
+            for l_key, h_l in h.items():
+                # h_l: [N, C_in, 2l+1]
+                C_in = h_l.shape[1]
+                multiplicities = 2 * l_key + 1
+                # Scatter sum by batch
+                out = torch.zeros(B, C_in, multiplicities, device=device, dtype=h_l.dtype)
+                out.scatter_add_(0, batch.unsqueeze(-1).unsqueeze(-1).expand_as(h_l), h_l)
+                # Channel projection to mode_channels
+                if C_in != C:
+                    proj = nn.Linear(C_in, C, bias=False, device=device, dtype=h_l.dtype)
+                    nn.init.normal_(proj.weight, std=0.02)
+                    out = out.transpose(1, 2).reshape(B * multiplicities, C_in)
+                    out = proj(out).reshape(B, multiplicities, C).transpose(1, 2)
+                pooled[l_key] = out
+
+        elif self.config.baseline_mode == "attn_pool":
+            # Scalar attention weights from l=0 features
+            h0 = h.get(0, h.get((0, 1)))  # [N, C_in, 1]
+            if h0 is None:
+                h0 = torch.zeros(h[list(h.keys())[0]].shape[0], C, 1,
+                                 device=device, dtype=h[list(h.keys())[0]].dtype)
+            h0_flat = h0.reshape(h0.shape[0], -1)  # [N, C_in]
+
+            # Attention: per-atom score from scalar features
+            attn_net = nn.Sequential(
+                nn.Linear(h0_flat.shape[1], C),
+                nn.SiLU(),
+                nn.Linear(C, 1),
+            ).to(device)
+            # Use a non-parameterized soft-attention (temp=1) for now
+            scores = attn_net(h0_flat).squeeze(-1)  # [N]
+            # Normalize per molecule via softmax
+            scores_max = torch.zeros(B, device=device)
+            scores_max.scatter_reduce_(0, batch, scores, reduce="amax", include_self=False)
+            scores = scores - scores_max[batch]  # stabilize
+            exp_scores = torch.exp(scores)
+            exp_sum = torch.zeros(B, device=device)
+            exp_sum.scatter_add_(0, batch, exp_scores)
+            attn = exp_scores / (exp_sum[batch] + 1e-10)  # [N]
+
+            for l_key, h_l in h.items():
+                C_in = h_l.shape[1]
+                multiplicities = 2 * l_key + 1
+                w = attn.view(-1, 1, 1)
+                weighted = h_l * w
+                out = torch.zeros(B, C_in, multiplicities, device=device, dtype=h_l.dtype)
+                out.scatter_add_(0, batch.unsqueeze(-1).unsqueeze(-1).expand_as(h_l), weighted)
+                pooled[l_key] = out
+
+        # ── Build pseudo mode dict for readout compatibility ──
+        # Pooled tensors may have C_in != mode_channels; project channels first.
+        O: dict = {}
+        K = 1
+        C_out = self.config.mode_channels
+        mode_mask = torch.ones(B, K, dtype=torch.bool, device=device)
+
+        for l_key, p_l in list(pooled.items()):
+            C_in = p_l.shape[1]  # [B, C_in, 2l+1]
+            if C_in != C_out:
+                # Project channels: [B, C_in, M] → [B, C_out, M]
+                proj = nn.Linear(C_in, C_out, bias=False, device=device, dtype=p_l.dtype)
+                nn.init.normal_(proj.weight, std=0.02)
+                p_l = p_l.transpose(1, 2).reshape(-1, C_in)
+                p_l = proj(p_l).reshape(B, -1, C_out).transpose(1, 2)
+
+            l = l_key if isinstance(l_key, int) else l_key[0]
+            O[(l, 1)] = p_l.unsqueeze(1)  # [B, 1, C_out, 2l+1]
+            if l == 0:
+                O[0] = O[(0, 1)]
+
+        # ── Forward through MTO modules for minimal processing ──
+        # Skip CG coupling for baselines
+        # Skip gates for baselines
+        # Go directly to readouts
+
+        result: dict = {}
+        if self.scalar_readout is not None:
+            result["scalar"] = self.scalar_readout(O, mode_mask=mode_mask)
+        if self.vector_readout is not None:
+            result["vector"] = self.vector_readout(O, mode_mask=mode_mask)
+        if self.rank2_readout is not None:
+            result["tensor"] = self.rank2_readout(O, mode_mask=mode_mask)
+        if self.spectral_readout is not None:
+            result["spectrum"] = self.spectral_readout(O, mode_mask=mode_mask)
+
+        if return_modes:
+            result["modes"] = O
+        if mode_mask is not None:
+            result["mode_mask"] = mode_mask
+        if return_diagnostics:
+            result["diagnostics"] = {"route_stats": {}, "gate_stats": {}}
 
         return result
 
